@@ -1,0 +1,138 @@
+.nutrition-intro { padding:20px 24px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; }
+.nutrition-intro p { margin:8px 0 0; color:var(--muted); }
+.formula { font-size:18px; line-height:1.8; letter-spacing:.2px; color:#075985; overflow-wrap:anywhere; }
+.formula-flow { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:20px; }
+.formula-step { border:1px solid var(--line); padding:18px; border-radius:8px; display:flex; flex-direction:column; align-items:flex-start; gap:12px; }
+.formula-step small { color:var(--muted); }
+.formula-step p { margin:0; }
+.formula-step:last-child { grid-column:1/-1; }
+.nutrition-toolbar { display:flex; flex-wrap:wrap; gap:12px; padding:16px 20px; align-items:center; }
+.nutrition-toolbar input { flex:1; min-width:180px; }
+.nutrition-toolbar > input { width:auto; }
+.nutrition-toolbar > select { width:auto; min-width:150px; }
+.nutrition-toolbar input,.nutrition-toolbar select,.import-sheet input,.import-sheet select { padding:9px 12px; border:1px solid var(--line-strong); border-radius:6px; background:white; }
+.nutrition-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.nutrition-tabs button { padding:9px 14px; border:1px solid var(--line); background:white; border-radius:6px; }
+.nutrition-tabs button.active { color:#0369a1; border-color:#0284c7; background:#f0f9ff; }
+.nutrition-empty { padding:32px; text-align:center; color:var(--muted); }
+.import-sheet { padding:20px; margin:12px 0; border:1px solid var(--line); border-radius:8px; }
+.import-sheet .form-grid { padding:12px 0; }
+.nutrition-message { padding:12px 16px; background:#f0f9ff; border-left:3px solid #0284c7; margin:12px 0; }
+.nutrition-dialog { margin:0 0 0 auto; height:100dvh; max-height:100dvh; width:min(850px,95vw); max-width:95vw; border:0; padding:28px; color:var(--ink); box-shadow:var(--shadow-md); }
+.nutrition-dialog::backdrop { background:#10182880; }
+.nutrition-dialog header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.nutrition-dialog h2 { overflow-wrap:anywhere; }
+.nutrition-dialog .panel { margin:18px 0; }
+.nutrition-dialog .detail-summary { padding:16px 0; }
+.nutrition-dialog td { white-space:normal; overflow-wrap:anywhere; }
+.nutrition-footnote { color:var(--muted); margin:12px 0; font-size:13px; }
+@media(max-width:900px) { .formula-flow { grid-template-columns:1fr; } }
+.calc-layout { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:stretch; }
+.np-panel{margin-bottom:24px}.np-panel .panel-head{display:flex;justify-content:space-between;gap:16px;align-items:center}.np-panel .panel-head h2{font-size:17px}.np-body{padding:20px 24px}.np-summary,.np-editor{list-style:none;margin:0;padding:0;display:grid;gap:12px}.np-summary{grid-template-columns:repeat(4,minmax(0,1fr))}.np-summary li,.np-editor li{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--surface-soft)}.np-rank{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#e7f4fd;color:var(--primary);font-size:13px;font-weight:600;flex-shrink:0}.np-body strong{font-size:14px}.np-editor li>div:not(.np-moves){flex:1}.np-editor p{margin:6px 0 0;color:var(--muted);font-size:13px}.np-moves{display:flex;gap:8px}.np-moves button{min-width:40px}.np-moves button:disabled{opacity:.35;cursor:default}.np-message{margin:0 0 16px;color:#047857;font-size:13px}.np-error{color:#b42318}.np-body>.nutrition-footnote{margin:16px 0 0}@media(max-width:1100px){.np-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.np-summary{grid-template-columns:1fr}.np-panel .panel-head{align-items:flex-start;flex-direction:column}.np-body{padding:16px}.np-editor li{flex-wrap:wrap}.np-moves{margin-left:auto}}
+.calc-reference,.calc-sandbox { min-width:0; }
+.calc-reference h2,.calc-sandbox h2 { margin:0 0 18px; }
+.calc-reference .formula-step { margin-bottom:14px;background:white; }
+.calc-reference,.calc-sandbox { padding:24px;background:white;border:1px solid var(--line);border-radius:8px; }
+.calc-inputs { display:grid;gap:14px;margin-bottom:18px; }
+.calc-inputs label { display:grid;gap:7px;color:var(--muted);font-size:13px; }
+.calc-inputs input,.calc-inputs select { width:100%;min-width:0;padding:10px;border:1px solid var(--line-strong);border-radius:6px; }
+.calc-answer { padding:22px;background:#eff6ff;border-radius:8px;margin:18px 0;color:#075985; }
+.calc-answer>strong { display:block;font-size:38px;margin:10px 0; }
+.calc-answer strong small { font-size:16px;font-weight:normal; }
+.calc-answer p { margin-bottom:6px; }
+.calc-trace { font-size:13px;overflow-wrap:anywhere; }
+.calc-result-step { padding:18px 0;border-bottom:1px solid var(--line); }
+.calc-result-step h3 { margin-bottom:12px; }
+.calc-result-step p:last-child { margin-bottom:0; }
+.calc-result-step summary { cursor:pointer;color:var(--primary-strong);padding:8px 0; }
+.calc-water { margin-top:24px;padding-top:22px;border-top:1px solid var(--line); }
+.calc-water p { font-size:13px;color:var(--muted); }
+.calc-water-values { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0; }
+.calc-water-values>div { padding:14px;background:#f0fdfa;border-radius:6px; }
+.calc-water-values span,.calc-water-values strong { display:block; }
+.calc-water-values strong { font-size:23px;color:#0f766e;margin-top:8px; }
+@media(max-width:1000px) { .calc-layout { grid-template-columns:1fr; } }
+
+/* Scoped library presentation. */
+.nutrition-library { display:grid; gap:22px; }
+.library-help-row { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:13px; }
+.nutrition-help { display:grid; place-items:center; width:32px; height:32px; border:1px solid #b7d5e9; border-radius:50%; color:#0879ae; background:white; font:italic 700 18px Georgia,serif; cursor:pointer; }
+.nutrition-help:hover { background:#e0f2fe; border-color:#0284c7; }
+.nutrition-help:focus-visible,.nutrition-library button:focus-visible { outline:3px solid #38bdf8; outline-offset:3px; }
+.nutrition-library .nutrition-intro { border-radius:12px; background:#f0f7fc; border-color:#d5e7f4; }
+.nutrition-library .summary-strip { margin:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:white; }
+.nutrition-library .summary-item { padding:18px 22px; }
+.nutrition-library .summary-item strong { font-size:26px; margin:5px 0; }
+.nutrition-library .panel { margin:0; background:white; border:1px solid #dfe7ef; border-radius:14px; overflow:hidden; box-shadow:0 3px 12px #173c6505; }
+.nutrition-library .panel-head { padding:20px 24px; border-bottom:1px solid #edf1f5; }
+.nutrition-library .panel-head h2 { font-size:17px; }
+.nutrition-library .panel-head p { margin-top:6px; line-height:1.6; }
+.nutrition-library .nutrition-upload { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(300px,1.2fr); gap:24px; padding:24px; max-width:none; }
+.nutrition-upload label { display:flex; flex-direction:column; gap:10px; align-self:stretch; padding:20px; background:#f8fafc; border:1px solid #e4ebf2; border-radius:10px; }
+.nutrition-upload .nutrition-file { border:1px dashed #9bc8df; background:#f5fbff; }
+.upload-step { font-size:11px; font-weight:700; letter-spacing:1px; color:#56819a; }
+.nutrition-upload select,.nutrition-upload input { width:100%; min-width:0; background:white; border:1px solid #d5e1eb; border-radius:8px; padding:12px; }
+.nutrition-upload input::file-selector-button { border:0; border-radius:6px; padding:8px 14px; background:#0284c7; color:white; margin-right:14px; cursor:pointer; }
+.nutrition-library .nutrition-tabs { margin:0; gap:8px; }
+.nutrition-library .nutrition-tabs button { padding:10px 16px; border-radius:9px; color:#526477; cursor:pointer; }
+.nutrition-library .nutrition-tabs button:hover { background:#edf6fc; }
+.nutrition-library .nutrition-tabs button.active { background:#e7f4fc; border-color:#86c9ec; color:#0278b5; font-weight:600; }
+.nutrition-library .nutrition-toolbar { padding:18px 24px; background:#fff; }
+.nutrition-library .table-wrap { border:0; border-radius:0; }
+.nutrition-library th { background:#f7f9fc; color:#64748b; padding:13px 22px; font-size:12px; font-weight:600; }
+.nutrition-library td { padding:18px 22px; border-bottom:1px solid #edf1f5; line-height:1.7; }
+.nutrition-library td small { color:#7b8a9c; font-size:12px; }
+.nutrition-library tbody tr:hover { background:#f8fcff; }
+.nutrition-library td:first-child strong { color:#1e3b50; font-weight:600; }
+.nutrition-library td:last-child { white-space:nowrap; }
+.nutrition-library .table-action { padding:6px 9px; border-radius:6px; }
+.nutrition-library .table-action:hover { background:#eaf5fc; }
+.nutrition-help-dialog { margin:auto; width:min(760px,92vw); height:auto; max-height:85dvh; border:1px solid #e0e8f0; border-radius:18px; padding:28px; box-shadow:0 24px 80px #102b4933; }
+.nutrition-help-dialog header h2 { font-size:20px; }
+.nutrition-help-dialog header .secondary-button { width:auto; flex:0 0 auto; padding:8px 14px; }
+.category-guide { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:22px; }
+.category-guide article { padding:18px; background:#f8fafc; border:1px solid #e2eaf1; border-radius:10px; }
+.category-guide h3 { margin:0 0 8px; font-size:14px; color:#087bad; }
+.category-guide p { margin:0; color:#536579; font-size:13px; line-height:1.8; }
+.sheet-demo-list { display:grid; gap:10px; margin:20px 0; }
+.retrieval-launcher { position:fixed; right:28px; bottom:24px; z-index:40; box-shadow:0 6px 24px #07598530; border-radius:24px; }
+.retrieval-panel { position:fixed; inset:0 0 0 auto; width:min(460px,100vw); z-index:60; background:#f6f9fc; border-left:1px solid #dce6ef; box-shadow:-12px 0 40px #16385818; display:flex; flex-direction:column; }
+.retrieval-panel.wide { width:min(760px,100vw); }
+.retrieval-panel[hidden],.retrieval-launcher[hidden] { display:none; }
+.retrieval-panel header { padding:22px; display:flex; gap:12px; align-items:center; justify-content:space-between; background:white; border-bottom:1px solid #e3eaf1; }
+.retrieval-panel header h2 { margin:0 0 6px; font-size:18px; }
+.retrieval-panel header small { color:#6b7e90; font-size:12px; }
+.retrieval-panel header>div:last-child { display:flex; gap:6px; }
+.retrieval-panel header button { padding:7px 9px; width:auto; white-space:nowrap; }
+.retrieval-panel header .panel-icon-button { width:36px; height:36px; padding:0; display:inline-grid; place-items:center; flex:0 0 auto; }
+.panel-icon-button svg { pointer-events:none; }
+.panel-icon-button:focus-visible { outline:3px solid #38bdf8; outline-offset:2px; }
+.retrieval-filters { display:grid; grid-template-columns:1fr 100px; gap:12px; padding:18px 22px; background:white; }
+.retrieval-filters label,.retrieval-composer>label { font-size:12px; color:#687a8b; }
+.retrieval-filters select { display:block; margin-top:7px; padding:10px; width:100%; border:1px solid #d8e3ec; border-radius:8px; background:white; }
+.retrieval-messages { flex:1; min-height:0; overflow-y:auto; padding:22px; display:flex; flex-direction:column; gap:16px; }
+.retrieval-answer,.retrieval-question { padding:16px; border-radius:12px; font-size:14px; line-height:1.7; overflow-wrap:anywhere; }
+.retrieval-answer { background:white; border:1px solid #e0e9f0; align-self:stretch; }
+.retrieval-answer article { border-top:1px solid #e4ebf1; margin-top:12px; padding-top:12px; }
+.retrieval-answer article p { font-size:12px; color:#64748b; }
+.retrieval-question { background:#e0f2fe; color:#075985; align-self:flex-end; max-width:90%; }
+.retrieval-question small { display:block; font-size:11px; margin-top:6px; }
+.retrieval-composer { padding:18px 22px; background:white; border-top:1px solid #e0e8ef; }
+.retrieval-composer>div { display:flex; gap:10px; margin-top:8px; }
+.retrieval-composer input { flex:1; width:0; min-width:0; padding:12px; border:1px solid #d4e0eb; border-radius:8px; }
+.retrieval-composer button { width:auto; flex:0 0 auto; }
+.sheet-demo-row { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:16px; border:1px solid #e1e9f0; border-radius:10px; background:#f8fafc; }
+.sheet-demo-row label { display:flex; align-items:center; gap:12px; font-size:13px; }
+.sheet-demo-row label:last-child { flex-direction:column; align-items:stretch; gap:6px; color:#64748b; }
+.sheet-demo-row input { width:16px; height:16px; flex:0 0 auto; accent-color:#0284c7; }
+.sheet-demo-row small { display:block; color:#7b8a9c; margin-top:5px; }
+.sheet-demo-row select { width:100%; padding:10px; border:1px solid #d5e1eb; border-radius:7px; background:white; }
+.nutrition-upload .primary-button { align-self:flex-start; width:auto; }
+@media(max-width:500px) { .sheet-demo-row { grid-template-columns:1fr; gap:12px; } }
+@media(max-width:700px) {
+  .nutrition-library .nutrition-upload,.category-guide { grid-template-columns:1fr; }
+  .nutrition-library .nutrition-upload { padding:16px; gap:12px; }
+  .nutrition-library .panel-head,.nutrition-library .nutrition-toolbar { padding:16px; }
+  .nutrition-help-dialog { padding:20px; }
+}
+

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TP-RAG 後台系統 Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./nutrition.css?v=20261029-priority" />
+    <link rel="stylesheet" href="./knowledge-maintenance.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="後台主選單">
+        <div class="brand">
+          <div class="brand-mark">TP</div>
+          <div class="brand-copy">
+            <strong>TP-RAG Admin</strong>
+            <span>問卷營養推薦後台</span>
+          </div>
+        </div>
+        <nav class="nav" id="nav"></nav>
+        <div class="sidebar-footer">
+          <span>Demo scope</span>
+          <strong>UI + API 規格原型</strong>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div class="topbar-title">
+            <p class="eyebrow" id="view-route">/recommendation-cases</p>
+            <h1 id="view-title">使用者推薦歷史紀錄</h1>
+            <p class="subtitle" id="view-subtitle">查詢訪客每次提交問卷的紀錄、聯絡資訊與當次推薦結果。</p>
+          </div>
+          <div class="top-actions">
+            <span class="environment-badge">Demo 環境</span>
+            <label class="global-search">
+              <span>全域搜尋</span>
+              <input type="search" placeholder="案例 ID、API Key、欄位名稱、會員..." />
+            </label>
+            <button class="account-menu" type="button" aria-label="目前登入管理者">
+              <span class="avatar">管</span>
+              <span class="account-copy">
+                <strong>管理員 Joy</strong>
+                <small>系統管理員</small>
+              </span>
+            </button>
+          </div>
+        </header>
+
+        <section class="view" id="view-content" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+    <script src="./recommendation-history.js"></script>
+    <script src="./calculation-data.js"></script>
+    <script src="./calculation-core.js"></script>
+    <script src="./nutrition.js"></script>
+    <script src="./nutrition-priority.js"></script>
+    <script src="./calculation-ui.js?v=20261029-priority"></script>
+    <script src="./customer-config.js"></script>
+    <script src="./record-dialogs.js"></script>
+    <script src="./knowledge-data.js"></script>
+    <script src="./breed-size-data.js"></script>
+    <script src="./knowledge-maintenance.js"></script>
+    <script src="./api-management.js"></script>
+    <script>init();</script>
+  </body>
+</html>
