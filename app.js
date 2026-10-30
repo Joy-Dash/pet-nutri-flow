@@ -1,11 +1,11 @@
 const modules = [
-  { id: "admins", label: "帳號與權限管理", route: "/admins", subtitle: "登入、帳號管理、角色權限與操作紀錄。" },
-  { id: "api-integration", label: "官網 API 串接管理", route: "/api-integration", subtitle: "API Key、官網來源、API 文件欄位說明與串接狀態。" },
-  { id: "questionnaire", label: "問卷內容管理", route: "/questionnaire", subtitle: "欄位庫、回答格式與問卷版本管理。" },
-  { id: "nutrition-rules", label: "營養規則管理", route: "/nutrition-rules", subtitle: "過敏、疾病、排便、亞健康、活動量與期望改善規則。" },
   { id: "rag", label: "知識庫與檔案匯入管理", route: "/rag", subtitle: "集中上傳檔案，依資料類型執行 AI 解析、結構化匯入與 RAG 索引。" },
+  { id: "questionnaire", label: "問卷內容管理", route: "/questionnaire", subtitle: "欄位庫、回答格式與問卷版本管理。" },
+  { id: "nutrition-rules", label: "計算流程與規則", route: "/nutrition-rules", subtitle: "檢閱 RER、基準能量、活動量、BCS、MER 與每日營養需求的公式及來源。" },
   { id: "recommendation-cases", label: "使用者推薦歷史紀錄", route: "/recommendation-cases", subtitle: "查詢前台使用者每次提交問卷的推薦紀錄與當次結果。" },
-  { id: "api-monitoring", label: "API 監控紀錄", route: "/api-monitoring", subtitle: "Request / Response、狀態碼、錯誤訊息、耗時、來源與關聯案例。" },
+  { id: "api-integration", label: "API 管理", route: "/api-integration", subtitle: "查看問卷 API 格式說明與呼叫紀錄。" },
+  { id: "api-monitoring", label: "AI Token 用量", route: "/api-monitoring", subtitle: "查看 AI 處理的輸入、輸出與總 Token 用量。" },
+  { id: "admins", label: "帳號與權限管理", route: "/admins", subtitle: "登入、帳號管理、角色權限與操作紀錄。" },
 ];
 
 const members = [
@@ -23,35 +23,35 @@ const petProfiles = [
 
 const admins = [
   { name: "系統管理員", email: "admin@example.com", account: "admin", role: "Super Admin", scope: "全部模組", status: "啟用" },
-  { name: "營養師 Joy", email: "nutrition@example.com", account: "nutrition", role: "營養師", scope: "問卷 / 營養 / RAG", status: "啟用" },
-  { name: "工程維運", email: "ops@example.com", account: "ops", role: "工程", scope: "API / 監控 / 案例", status: "啟用" },
-  { name: "客服唯讀", email: "support@example.com", account: "support", role: "唯讀", scope: "問卷紀錄 / 案例唯讀", status: "停用" },
+  { name: "營養師 Joy", email: "nutrition@example.com", account: "nutrition", role: "營養師", scope: "問卷 / 計算規則 / 知識庫", status: "啟用" },
+  { name: "工程維運", email: "ops@example.com", account: "ops", role: "工程", scope: "API 管理 / AI Token 用量 / 推薦紀錄", status: "啟用" },
+  { name: "客服唯讀", email: "support@example.com", account: "support", role: "唯讀", scope: "推薦紀錄唯讀", status: "停用" },
 ];
 
 const roles = [
   { id: "super-admin", name: "Super Admin", description: "可管理所有模組、帳號與角色權限。", accounts: 1, status: "啟用", scope: "全部模組" },
-  { id: "nutritionist", name: "營養師", description: "維護問卷、營養模板、營養規則與 RAG 知識庫。", accounts: 1, status: "啟用", scope: "問卷 / 營養 / RAG" },
-  { id: "ops", name: "工程", description: "管理官網 API 串接、監控紀錄與推薦案例追蹤。", accounts: 1, status: "啟用", scope: "API / 監控 / 案例" },
-  { id: "readonly", name: "唯讀", description: "只能查看會員、寵物資料、案例與監控紀錄。", accounts: 1, status: "啟用", scope: "會員 / 案例唯讀" },
+  { id: "nutritionist", name: "營養師", description: "維護問卷內容、計算規則與知識庫資料。", accounts: 1, status: "啟用", scope: "問卷 / 計算規則 / 知識庫" },
+  { id: "ops", name: "工程", description: "查看 API 管理、AI Token 用量與推薦紀錄。", accounts: 1, status: "啟用", scope: "API 管理 / AI Token 用量 / 推薦紀錄" },
+  { id: "readonly", name: "唯讀", description: "只能查看使用者推薦歷史紀錄。", accounts: 1, status: "啟用", scope: "推薦紀錄唯讀" },
 ];
 
 const rolePermissionProfiles = {
-  "super-admin": modules.map((item) => ({ module: item.label, view: true, write: true, del: true })),
+  "super-admin": modules.map((item) => ({ moduleId: item.id, module: item.label, view: true, write: !["api-integration", "api-monitoring", "recommendation-cases"].includes(item.id), del: ["admins", "questionnaire", "rag"].includes(item.id) })),
   nutritionist: modules.map((item) => ({
-    module: item.label,
-    view: !["帳號與權限管理", "官網 API 串接管理", "API 監控紀錄"].includes(item.label),
-    write: ["問卷內容管理", "營養標準模板管理", "營養規則管理", "知識庫與檔案匯入管理"].includes(item.label),
-    del: ["問卷內容管理", "知識庫與檔案匯入管理"].includes(item.label),
+    moduleId: item.id, module: item.label,
+    view: ["questionnaire", "nutrition-rules", "rag", "recommendation-cases"].includes(item.id),
+    write: ["questionnaire", "nutrition-rules", "rag"].includes(item.id),
+    del: ["questionnaire", "rag"].includes(item.id),
   })),
   ops: modules.map((item) => ({
-    module: item.label,
-    view: ["官網 API 串接管理", "使用者推薦歷史紀錄", "API 監控紀錄", "知識庫與檔案匯入管理"].includes(item.label),
-    write: ["官網 API 串接管理"].includes(item.label),
+    moduleId: item.id, module: item.label,
+    view: ["api-integration", "recommendation-cases", "api-monitoring", "rag"].includes(item.id),
+    write: false,
     del: false,
   })),
   readonly: modules.map((item) => ({
-    module: item.label,
-    view: ["會員管理", "使用者推薦歷史紀錄", "API 監控紀錄"].includes(item.label),
+    moduleId: item.id, module: item.label,
+    view: item.id === "recommendation-cases",
     write: false,
     del: false,
   })),
@@ -71,26 +71,26 @@ const questionFields = [
   { name: "品種", key: "breed", purpose: "基礎生理特徵", type: "text", required: false, order: 2, status: "啟用", options: 0, api: "petProfile.breed" },
   { name: "年齡（月）", key: "age_months", purpose: "生命階段判斷", type: "number", required: true, order: 3, status: "啟用", options: 0, api: "petProfile.ageMonths" },
   { name: "體重", key: "weight_kg", purpose: "RER/MER 計算", type: "number", required: true, order: 4, status: "啟用", options: 0, api: "petProfile.weightKg" },
-  { name: "BCS 體態評分", key: "bcs_score", purpose: "體態加成規則", type: "single_select", required: true, order: 5, status: "啟用", options: 5, api: "answers.bcsScore" },
+  { name: "BCS 體態評分", key: "bcs_score", purpose: "體態加成規則", type: "single_select", required: true, order: 5, status: "啟用", options: 9, api: "answers.bcsScore" },
   { name: "過敏原", key: "allergens", purpose: "食材排除", type: "multi_select", required: false, order: 6, status: "啟用", options: 8, api: "answers.allergens" },
   { name: "血檢異常", key: "blood_test_flags", purpose: "疾病風險判斷", type: "multi_select", required: false, order: 7, status: "草稿", options: 6, api: "answers.bloodTestFlags" },
-  { name: "期望改善效果", key: "health_goals", purpose: "推薦排序與 RAG 查詢", type: "multi_select", required: true, order: 8, status: "啟用", options: 5, api: "answers.healthGoals" },
+  { name: "飼主需求（期望改善效果）", key: "health_goals", purpose: "營養元素調整的飼主需求來源", type: "multi_select", required: true, order: 8, status: "啟用", options: 5, api: "answers.healthGoals" },
 ];
 
 const optionGroups = [
   { field: "物種", key: "species", species: "犬貓共用", count: 2, options: [["犬", "dog"], ["貓", "cat"]] },
-  { field: "BCS 體態評分", key: "bcs_score", species: "犬貓共用", count: 5, options: [["1-3 偏瘦", "underweight"], ["4-5 理想", "ideal"], ["6-9 過重", "overweight"]] },
+  { field: "BCS 體態評分", key: "bcs_score", species: "犬貓共用", count: 9, options: Array.from({ length: 9 }, (_, i) => [`${i + 1}/9`, String(i + 1)]) },
   { field: "過敏原", key: "allergens", species: "犬貓共用", count: 8, options: [["雞肉", "chicken"], ["牛肉", "beef"], ["乳製品", "dairy"], ["穀物", "grain"]] },
   { field: "排便分類", key: "stool_score", species: "犬貓共用", count: 7, options: [["偏硬", "hard"], ["正常", "normal"], ["偏軟", "soft"], ["水便", "watery"]] },
   { field: "活動量", key: "activity_level", species: "犬", count: 4, options: [["低活動量", "low"], ["中等", "moderate"], ["高活動量", "high"], ["工作犬", "working"]] },
   { field: "血檢異常", key: "blood_test_flags", species: "犬貓共用", count: 6, options: [["腎臟指數", "kidney"], ["肝臟指數", "liver"], ["胰臟指數", "pancreas"], ["血脂偏高", "hyperlipidemia"]] },
-  { field: "期望改善效果", key: "health_goals", species: "犬貓共用", count: 5, options: [["排便改善", "digestion"], ["體重控制", "weight"], ["皮毛保健", "skin_coat"], ["高齡照護", "senior"]] },
+  { field: "飼主需求（期望改善效果）", key: "health_goals", species: "犬貓共用", count: 5, options: [["維持目前健康體態", "maintain_health"], ["改善掉毛、毛髮保養", "skin_coat"], ["關節強健、維持好體力", "joint_strength"], ["腸胃調理、改善消化", "digestion"], ["體重管理、減肥", "weight_management"]] },
 ];
 
 const questionnaires = [
-  { name: "官網推薦問卷 v3", version: "official_v3", usage: "官網 production", fields: 8, required: 5, status: "已發布", updated: "2026-08-27 09:20" },
-  { name: "營養建議補充問卷", version: "nutrition_addon_v1", usage: "sandbox 測試", fields: 6, required: 3, status: "草稿", updated: "2026-08-26 18:42" },
-  { name: "高齡犬專用問卷", version: "senior_dog_v1", usage: "尚未開放", fields: 7, required: 4, status: "停用", updated: "2026-08-21 11:05" },
+  { name: "官網推薦問卷 v3", version: "official_v3", usage: "官網 production", composition: questionFields.filter(f=>f.status==='啟用').map(f=>({key:f.key,required:f.required,order:f.order})), status: "已發布", updated: "2026-08-27 09:20" },
+  { name: "營養建議補充問卷", version: "nutrition_addon_v1", usage: "sandbox 測試", composition: questionFields.slice(0,6).map(f=>({key:f.key,required:f.key!=='bcs_score'&&f.required,order:f.order})), status: "草稿", updated: "2026-08-26 18:42" },
+  { name: "高齡犬專用問卷", version: "senior_dog_v1", usage: "尚未開放", composition: questionFields.filter(f=>f.status==='啟用').map(f=>({key:f.key,required:f.key!=='health_goals'&&f.required,order:f.order})), status: "停用", updated: "2026-08-21 11:05" },
 ];
 
 const nutritionTemplates = [
@@ -639,8 +639,8 @@ function renderQuestionFieldDetail() {
 function renderQuestionnaireVersions() {
   const rows = questionnaires.map((item) => `<tr>
     <td><button class="link-button" type="button" data-questionnaire-version="${item.version}">${item.name}</button><br><span class="muted-text">${item.version}</span></td>
-    <td>${item.fields}</td>
-    <td>${item.required}</td>
+    <td>${item.composition?.length||0}</td>
+    <td>${item.composition?.filter(f=>f.required).length||0}</td>
     <td>${badge(item.status)}</td>
     <td>${item.updated}</td>
     <td><div class="row-actions">
@@ -1029,7 +1029,7 @@ function renderNav() {
   const nav = document.querySelector("#nav");
   nav.innerHTML = modules
     .map((item, index) => `<button class="nav-item ${index === 0 ? "active" : ""}" type="button" data-view="${item.id}" title="${item.label}">
-      <span class="nav-index">${String(index + 1).padStart(2, "0")}</span>
+      <span class="nav-index">${String(modules.filter(module => module.id !== "api-monitoring").indexOf(item) + 1).padStart(2, "0")}</span>
       <span class="nav-label">${item.label}</span>
       ${item.badge ? `<span class="nav-badge">${item.badge}</span>` : ""}
     </button>`)

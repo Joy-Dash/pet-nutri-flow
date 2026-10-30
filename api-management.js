@@ -22,7 +22,7 @@
   renderNav=()=>{
     previousNav();const api=document.querySelector('[data-view="api-integration"]'),tokens=document.querySelector('[data-view="api-monitoring"]');
     const group=document.createElement('details');group.className='km-nav api-module';group.open=true;api.before(group);
-    group.innerHTML='<summary class="nav-item"><span class="nav-index">02</span><span class="nav-label">API 監控與用量</span><span class="km-caret" aria-hidden="true">▾</span></summary>';
+    group.innerHTML='<summary class="nav-item"><span class="nav-index">05</span><span class="nav-label">API 監控與用量</span><span class="km-caret" aria-hidden="true">▾</span></summary>';
     for(const entry of [api,tokens]){entry.querySelector('.nav-index')?.remove();entry.classList.add('apim-subnav');group.append(entry);}
   };
   const redraw=()=>document.querySelector('#view-content').innerHTML=renderers['api-integration']();

@@ -27,11 +27,56 @@
       }
     }
     if (saved.permissions) for (const [id,permissions] of Object.entries(saved.permissions)) if(roles.some(r=>r.id===id)&&Array.isArray(permissions)) rolePermissionProfiles[id] = permissions;
+    const formerModuleIds={'官網 API 串接管理':'api-integration','營養規則管理':'nutrition-rules','API 監控紀錄':'api-monitoring'};
+    for(const [roleId,permissions] of Object.entries(rolePermissionProfiles)) {
+      rolePermissionProfiles[roleId]=modules.map((module,index)=>{
+        const previous=permissions.find(p=>p.moduleId===module.id||p.module===module.label||formerModuleIds[p.module]===module.id)||permissions[index];
+        const editable=!["api-integration","api-monitoring","recommendation-cases"].includes(module.id);
+        const deletable=["admins","questionnaire","rag"].includes(module.id);
+        return {moduleId:module.id,module:module.label,view:roleId==='super-admin'?true:!!previous?.view,write:editable&&(roleId==='super-admin'||!!previous?.write),del:deletable&&(roleId==='super-admin'||!!previous?.del)};
+      });
+    }
+    if(saved.permissions?.readonly?.some(p=>p.module==='API 監控紀錄'&&p.view)){
+      rolePermissionProfiles.readonly.forEach(p=>{p.view=p.moduleId==='recommendation-cases';p.write=false;p.del=false;});
+    }
+    const readonlyRole=roles.find(r=>r.id==='readonly');
+    if(readonlyRole?.description?.includes('會員')){readonlyRole.description='只能查看使用者推薦歷史紀錄。';readonlyRole.scope='推薦紀錄唯讀';}
+    const readonlyAccount=admins.find(a=>a.role===readonlyRole?.name);
+    if(readonlyAccount?.scope?.includes('案例'))readonlyAccount.scope='推薦紀錄唯讀';
+    const currentScopes={nutritionist:['問卷 / 營養 / RAG','問卷 / 計算規則 / 知識庫'],ops:['API / 監控 / 案例','API 管理 / AI Token 用量 / 推薦紀錄']};
+    for(const [id,[former,current]] of Object.entries(currentScopes)){
+      const role=roles.find(r=>r.id===id);if(role?.scope===former)role.scope=current;
+      const account=admins.find(a=>a.role===role?.name);if(account?.scope===former)account.scope=current;
+    }
+    const nutritionistRole=roles.find(r=>r.id==='nutritionist');
+    if(nutritionistRole?.description==='維護問卷、營養模板、營養規則與 RAG 知識庫。')nutritionistRole.description='維護問卷內容、計算規則與知識庫資料。';
+    const opsRole=roles.find(r=>r.id==='ops');
+    if(opsRole?.description==='管理官網 API 串接、監控紀錄與推薦案例追蹤。')opsRole.description='查看 API 管理、AI Token 用量與推薦紀錄。';
     if (saved.options) for (const [key,options] of Object.entries(saved.options)) {
       const group=optionGroups.find(g=>g.key===key);
       if(group){group.options=options;group.count=options.length;}
       else if(questionFields.some(f=>f.key===key)) optionGroups.push({key,field:questionFields.find(f=>f.key===key).name,species:'犬貓共用',options,count:options.length});
     }
+    // Bring older demo defaults forward without replacing intentionally customized versions.
+    const official=questionnaires.find(q=>q.version==='official_v3');
+    if(official?.composition?.map(c=>c.key).join(',')===questionFields.slice(0,6).map(f=>f.key).join(',')) {
+      const ownerNeeds=questionFields.find(f=>f.key==='health_goals');
+      official.composition.push({key:ownerNeeds.key,required:true,order:ownerNeeds.order});
+    }
+    const bcs=optionGroups.find(g=>g.key==='bcs_score');
+    if(bcs?.options?.some(([,value])=>['underweight','ideal','overweight'].includes(value))) {
+      bcs.options=Array.from({length:9},(_,i)=>[`${i+1}/9`,String(i+1)]);
+      bcs.count=9;
+    }
+    const ownerGroup=optionGroups.find(g=>g.key==='health_goals');
+    if(ownerGroup?.options?.length===4) {
+      ownerGroup.options=[['維持目前健康體態','maintain_health'],['改善掉毛、毛髮保養','skin_coat'],['關節強健、維持好體力','joint_strength'],['腸胃調理、改善消化','digestion'],['體重管理、減肥','weight_management']];
+      ownerGroup.count=5;
+    }
+    const ownerField=questionFields.find(f=>f.key==='health_goals');
+    if(ownerField?.name==='期望改善效果')ownerField.name='飼主需求（期望改善效果）';
+    if(ownerGroup?.field==='期望改善效果')ownerGroup.field='飼主需求（期望改善效果）';
+    for(const field of questionFields){const group=optionGroups.find(g=>g.key===field.key);if(group)field.options=group.options.length;}
   } catch { /* Storage may be unavailable; editing remains available for this session. */ }
 
   let active = null;
@@ -106,7 +151,7 @@
     const item=isNew?{...defaults[entity],_created:true}:s.data.find(r=>String(r[s.id])===key);
     if(!item)return;
     if(entity==='pets'&&isNew&&!members.length){notify('請先新增會員，再建立寵物資料。');return;}
-    const permissionsForItem=rolePermissionProfiles[item.id]||modules.map(m=>({module:m.label,view:false,write:false,del:false}));
+    const permissionsForItem=rolePermissionProfiles[item.id]||modules.map(m=>({moduleId:m.id,module:m.label,view:false,write:false,del:false}));
     let body=`<div class="form-grid">${s.fields.map(([k,l,t,ro])=>entity==='pets'&&k==='memberId'&&isNew?`<label>所屬會員<select name="memberId" required>${members.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}（${esc(m.id)}）</option>`).join('')}</select></label>`:control(k,l,t,item[k],ro&&!(isNew&&k===s.id))).join('')}</div>`;
     if(entity==='members') {
       const pets=petProfiles.filter(p=>p.memberId===item.id);
@@ -114,7 +159,7 @@
       body+=section('寵物清單','所屬寵物資料；可於「寵物資料」頁籤修改。',table(['寵物 ID','寵物名','物種','品種','年齡','體重','BCS','標籤'],pets.map(p=>`<tr>${[p.id,p.pet,p.species,p.breed,p.age,p.weight,p.bcs,p.tags.join('、')].map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`),720));
       body+=section('最近推薦案例','當次紀錄與結果可於「使用者推薦歷史紀錄」檢視。',table(['案例 ID','提交時間','問卷','狀態'],cases.map(c=>`<tr>${[c.id,c.submitted,c.survey,c.status].map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`),600));
     }
-    if(entity==='roles')body+=section('模組權限','調整進入、寫入與刪除權限；儲存後套用。',table(['模組','進入頁面','新增／編輯','刪除'],permissionsForItem.map((p,i)=>`<tr><td>${esc(p.module)}</td>${['view','write','del'].map(k=>`<td><input type="checkbox" name="permission-${i}-${k}" aria-label="${esc(p.module)} ${k}" ${p[k]?'checked':''}></td>`).join('')}</tr>`),640));
+    if(entity==='roles')body+=section('模組權限','依目前模組設定進入、寫入與刪除權限；唯讀功能不提供寫入或刪除。',table(['模組','進入頁面','新增／編輯','刪除'],permissionsForItem.map((p,i)=>`<tr><td>${esc(p.module)}</td>${['view','write','del'].map(k=>`<td><input type="checkbox" name="permission-${i}-${k}" aria-label="${esc(p.module)} ${k}" ${p[k]?'checked':''} ${k==='write'&&['api-integration','api-monitoring','recommendation-cases'].includes(p.moduleId)||k==='del'&&!['admins','questionnaire','rag'].includes(p.moduleId)?'disabled':''}></td>`).join('')}</tr>`),640));
     const group=entity==='fields'?optionGroups.find(g=>g.key===key):null;
     const choiceTypes=['single_select','multi_select','select'];
     let optionDraft=(group?.options||[]).map(([label,value])=>({label,value}));
@@ -127,7 +172,7 @@
       <details class="field-editor-section field-editor-advanced"><summary>串接資訊（系統產生）</summary><p>以下資訊供官網串接查閱，由系統維護，不需要填寫。</p><div class="form-grid field-editor-grid">${control('key','欄位代碼',null,fieldKey,true)}${control('api','Payload path',null,item.api||'answers.'+fieldKey,true)}</div></details></div>`;
     }
     if(entity==='versions') {
-      const composition=item.composition||(isNew?[]:questionFields.slice(0,6).map(f=>({key:f.key,required:f.required,order:f.order})));
+      const composition=item.composition||[];
       body+=section('問卷欄位組合','勾選使用欄位，設定本問卷必填與排序；不會修改欄位庫。',table(['使用','欄位','本問卷必填','排序'],questionFields.map((f,i)=>{const c=composition.find(c=>c.key===f.key);return `<tr><td><input type="checkbox" name="include-${i}" aria-label="使用 ${esc(f.name)}" ${c?'checked':''}></td><td>${esc(f.name)}<br><code>${esc(f.key)}</code></td><td><input type="checkbox" name="required-${i}" aria-label="${esc(f.name)} 必填" ${c?.required?'checked':''}></td><td><input type="number" min="1" step="1" name="order-${i}" aria-label="${esc(f.name)} 排序" value="${c?.order||i+1}"></td></tr>`;}),640));
     }
     const editor=open(`${isNew?'新增': '檢視／編輯'}${s.title}`,body,form=>{
@@ -148,7 +193,7 @@
       if(entity==='roles'){
         const permissions=permissionsForItem.map((p,i)=>({...p,...Object.fromEntries(['view','write','del'].map(k=>[k,form.elements.namedItem(`permission-${i}-${k}`).checked]))}));
         if(permissions.some(p=>(p.write||p.del)&&!p.view))throw Error('開放寫入或刪除時，必須同時開放進入頁面。');
-        if(item.id==='super-admin'&&(draft.status!=='啟用'||permissions.some(p=>!p.view||!p.write||!p.del)))throw Error('系統管理員角色必須維持啟用及完整權限。');
+        if(item.id==='super-admin'&&(draft.status!=='啟用'||permissions.some(p=>!p.view||(!['api-integration','api-monitoring','recommendation-cases'].includes(p.moduleId)&&!p.write)||(['admins','questionnaire','rag'].includes(p.moduleId)&&!p.del))))throw Error('系統管理員角色必須維持啟用及各模組可用的完整權限。');
         rolePermissionProfiles[draft.id]=permissions;
         admins.filter(a=>a.role===item.name).forEach(a=>{a.role=draft.name;a.scope=draft.scope;});
       }

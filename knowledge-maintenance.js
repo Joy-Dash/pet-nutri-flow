@@ -168,7 +168,7 @@
   renderers.rag = () => `<div class="nutrition-library km-library">${notice?`<div class="nutrition-message" role="status">${esc(notice)}</div>`:''}${tab==='data'?dataView():tab==='imports'?importView():logView()}<p class="nutrition-footnote">資料來自假資料 Excel，操作僅儲存在此瀏覽器；尚未串接正式資料庫、推薦計算或 RAG 索引。</p></div>`;
   Object.assign(modules.find(m=>m.id==='rag'),{subtitle:'維護營養模板、共用元素與各類規則，查詢匯入來源及異動明細。'});
   const oldRenderNav=renderNav;
-  renderNav=()=>{oldRenderNav();const nav=document.querySelector('[data-view="rag"]');const group=document.createElement('details');group.className='km-nav';group.open=true;nav.before(group);group.innerHTML='<summary class="nav-item"><span class="nav-index">05</span><span class="nav-label">知識庫與檔案匯入管理</span><span class="km-caret" aria-hidden="true">▾</span></summary>'+[['data','資料維護'],['imports','檔案匯入與紀錄'],['logs','異動明細']].map(([id,n])=>`<button type="button" data-km-nav="${id}">${n}</button>`).join('');nav.remove();};
+  renderNav=()=>{oldRenderNav();const nav=document.querySelector('[data-view="rag"]');const group=document.createElement('details');group.className='km-nav';group.open=true;nav.before(group);group.innerHTML='<summary class="nav-item"><span class="nav-index">01</span><span class="nav-label">知識庫與檔案匯入管理</span><span class="km-caret" aria-hidden="true">▾</span></summary>'+[['data','資料維護'],['imports','檔案匯入與紀錄'],['logs','異動明細']].map(([id,n])=>`<button type="button" data-km-nav="${id}">${n}</button>`).join('');nav.remove();};
   function closeDialog(force=false) {
     if(!force&&dirty&&!confirm('尚有未儲存的修改，確定放棄？'))return;
     document.querySelector('#km-dialog')?.remove(); dirty=false;
@@ -383,7 +383,7 @@
     const addCondition=document.querySelector('[data-condition-add]');if(addCondition)addCondition.onclick=()=>{const i=conditions.length,c={id:'condition-'+Date.now(),label:'新增判斷條件',source:'',sourceColumn:null,field:'',operator:'eq',lower:'',upper:'',lowerInclusive:'',upperInclusive:'',unit:'',confirmed:false};conditions.push(c);document.querySelector('#km-conditions').insertAdjacentHTML('beforeend',conditionCard(c,i));const card=document.querySelector(`[data-condition-index="${i}"]`);card.open=true;updateConditionControls(card);card.addEventListener('change',e=>{if(!e.target.name?.endsWith('-confirmed'))card.querySelector('input[type=checkbox]').checked=false;updateConditionControls(card);});dirty=true;card.scrollIntoView({block:'nearest'});};
     if(cfg){let counter=rules.length;document.querySelector('[data-rule-add]').onclick=()=>{const i=counter++;document.querySelector('#km-rules').insertAdjacentHTML('beforeend',ruleCard({id:r.id+'-rule-'+Date.now()+'-'+i,elementId:'',sourceName:'',phase:'',method:'multiplier',value:'',overridable:null},i));document.querySelector('#km-rules').lastElementChild.dataset.ruleIndex=i;document.querySelector('#km-rule-empty').hidden=true;dirty=true;document.querySelector('#km-rules').lastElementChild.scrollIntoView({block:'nearest'});};}
   }
-  const lifeColumns=[['weightMinKg','weightMaxKg','預估成犬體重','kg'],['growthMinMonths','growthMaxMonths','幼犬期','月'],['adultMinMonths','adultMaxMonths','成年期','月'],['seniorMinMonths','seniorMaxMonths','高齡期','月']];
+  const lifeColumns=[['weightMinKg','weightMaxKg','參考成犬體重','kg'],['growthMinMonths','growthMaxMonths','幼犬期','月'],['adultMinMonths','adultMaxMonths','成年期','月'],['seniorMinMonths','seniorMaxMonths','高齡期','月']];
   function lifeProfile(r){
     if(r.lifeProfile)return structuredClone(r.lifeProfile);
     const p={};for(const [i,cols] of lifeColumns.entries()){
@@ -391,10 +391,10 @@
       p[cols[0]]=c?.lower!==''&&c?.lower!=null?Number(c.lower)*scale:'';p[cols[1]]=c?.upper!==''&&c?.upper!=null?Number(c.upper)*scale:'';
     }return p;
   }
-  function lifeFields(r){const p=lifeProfile(r);return `<section class="km-record-section"><h3>適用範圍</h3><p class="nutrition-footnote">年齡統一以月填寫，體重以 kg 填寫。上下限採固定規則，不需設定比較方式或單位。</p><div class="km-life-ranges"><div class="km-life-range-head"><span>項目</span><span>下限</span><span>上限</span></div>${lifeColumns.map(([lo,hi,label,unit])=>`<div class="km-life-range"><strong>${label}<small>（${unit}）</small></strong><label><span>下限（${unit}）</span><input type="number" min="0" step="any" name="life-${lo}" value="${esc(p[lo])}" placeholder="請填下限"></label><label><span>上限（${unit}）</span><input type="number" min="0" step="any" name="life-${hi}" value="${esc(p[hi])}" placeholder="留白表示不限"></label></div>`).join('')}</div><p class="nutrition-footnote">統一採「包含下限、不包含上限」；上限留白表示不限。資料尚未補齊可先保存，系統會標示待補齊。</p></section>`;}
+  function lifeFields(r){const p=lifeProfile(r);return `<section class="km-record-section"><h3>生命階段月齡</h3><p class="nutrition-footnote">依已判定的體型，使用月齡判斷幼犬、成犬或高齡犬；成犬體重僅供參考，不參與階段判斷。</p><div class="km-life-ranges"><div class="km-life-range-head"><span>項目</span><span>下限</span><span>上限</span></div>${lifeColumns.map(([lo,hi,label,unit])=>`<div class="km-life-range"><strong>${label}<small>（${unit}）</small></strong><label><span>下限（${unit}）</span><input type="number" min="0" step="any" name="life-${lo}" value="${esc(p[lo])}" placeholder="請填下限"></label><label><span>上限（${unit}）</span><input type="number" min="0" step="any" name="life-${hi}" value="${esc(p[hi])}" placeholder="留白表示不限"></label></div>`).join('')}</div><p class="nutrition-footnote">月齡範圍採「包含下限、不包含上限」；上限留白表示不限。月齡尚未補齊可先保存，系統會標示待補齊。</p></section>`;}
   function readLifeProfile(f){
     const p={};for(const [lo,hi,label] of lifeColumns){for(const k of [lo,hi]){const raw=String(f.get('life-'+k)||'').trim();p[k]=raw===''?'':Number(raw);if(p[k]!==''&&(!Number.isFinite(p[k])||p[k]<0))throw Error(label+' 請填寫非負數字。');}if(p[lo]!==''&&p[hi]!==''&&p[lo]>=p[hi])throw Error(label+' 上限必須大於下限。');}
-    const complete=lifeColumns.every(([lo])=>p[lo]!=='')&&p.growthMaxMonths!==''&&p.adultMaxMonths!=='';
+    const complete=lifeColumns.slice(1).every(([lo])=>p[lo]!=='')&&p.growthMaxMonths!==''&&p.adultMaxMonths!=='';
     if(complete){if(p.growthMaxMonths!==p.adultMinMonths||p.adultMaxMonths!==p.seniorMinMonths)throw Error('幼犬、成年與高齡的月齡範圍須連續銜接，不能重疊或留空缺。');}
     return {profile:p,complete};
   }
