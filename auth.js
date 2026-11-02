@@ -15,8 +15,12 @@ window.backendAuth = (() => {
   const originalAdmins = renderers.admins;
   renderers.admins = () => {
     const html = originalAdmins();
-    if (!isSuper() || adminViewMode !== 'accounts') return html;
+    if (adminViewMode !== 'accounts') return html;
     const root = document.createElement('div'); root.innerHTML = html;
+    if (!isSuper()) {
+      root.querySelectorAll('button').forEach(b => { if (b.textContent.includes('新增帳號')) b.remove(); });
+      return root.innerHTML;
+    }
     root.querySelectorAll('[data-record-entity="admins"]').forEach(button => {
       const target = button.dataset.recordKey;
       if (!canReset(target)) return;
@@ -41,6 +45,12 @@ window.backendAuth = (() => {
     const next = allowed(id) ? id : modules.find(m => allowed(m.id))?.id;
     if (!next) { showLogin('此帳號尚無可用頁面，請聯絡最高管理員。'); return; }
     originalSetView(next); updateNavigation();
+    document.querySelector('#auth-password-reminder')?.remove();
+    if(current()?.requiresPasswordChange){
+      const reminder=document.createElement('div');reminder.className='nutrition-message';reminder.id='auth-password-reminder';
+      reminder.innerHTML='您的帳號已由最高管理員開通，請登入後設定自己的密碼。 <button type="button" class="secondary-button" data-auth-change>修改密碼</button>';
+      document.querySelector('#view-content').before(reminder);
+    }
   };
   function showLogin(message = '') {
     document.body.classList.add('auth-pending');
@@ -67,12 +77,19 @@ window.backendAuth = (() => {
     };
     screen.querySelector('[name="account"]').focus();
   }
-  function resetPassword(target) {
-    if (!canReset(target)) return;
+  function resetPassword(target, self = false) {
+    const authorized=()=>self?!!current()&&account===target:canReset(target);
+    if (!authorized()) return;
     const a = admins.find(a => a.account === target);
     const d = document.createElement('dialog'); d.className = 'record-dialog auth-reset';
     d.setAttribute('aria-labelledby', 'auth-reset-title');
     d.innerHTML = `<form><header class="record-head"><div><h2 id="auth-reset-title">重置密碼</h2><p>${esc(a.name)} · ${esc(a.account)}</p></div><button type="button" class="secondary-button" data-auth-cancel>關閉</button></header><div class="record-body"><p>由最高管理員直接設定此帳號的新密碼。</p><label>新密碼<input name="password" type="password" required autocomplete="new-password"></label><label>確認新密碼<input name="confirm" type="password" required autocomplete="new-password"></label><p class="auth-demo">此為介面示範：密碼只在本次頁面開啟期間有效，重新整理後還原。未變更正式系統密碼。</p></div><footer class="record-footer"><span class="record-error" role="alert"></span><button type="button" class="secondary-button" data-auth-cancel>取消</button><button type="submit" class="primary-button">確認重置</button></footer></form>`;
+    if(self){
+      d.querySelector('h2').textContent='修改自己的密碼';
+      d.querySelector('.record-body > p').textContent='輸入目前密碼，再設定自己的新密碼。';
+      d.querySelector('.record-body > p').insertAdjacentHTML('afterend','<label>目前密碼<input name="current" type="password" required autocomplete="current-password"></label>');
+      d.querySelector('button[type=submit]').textContent='儲存新密碼';
+    }
     document.body.append(d); d.showModal();
     const close = () => {
       if ([...d.querySelectorAll('input')].some(i => i.value) && !confirm('尚未完成重置，確定放棄？')) return;
@@ -84,12 +101,22 @@ window.backendAuth = (() => {
     d.querySelector('form').onsubmit = e => {
       e.preventDefault(); const f = new FormData(e.target);
       const error = d.querySelector('.record-error');
-      if (!canReset(target)) { error.textContent = '目前沒有重置此帳號密碼的權限。'; return; }
+      if (!authorized()) { error.textContent = '目前沒有重置此帳號密碼的權限。'; return; }
+      if(self&&f.get('current')!==(passwords.get(target)??demoPassword)){error.textContent='目前密碼不正確。';return;}
       if (f.get('password') !== f.get('confirm')) { error.textContent = '兩次輸入的密碼不一致。'; return; }
       passwords.set(target, String(f.get('password')));
+      if(self){
+        a.requiresPasswordChange=false;
+        document.querySelector('#auth-password-reminder')?.remove();
+        try{
+          const saved=JSON.parse(localStorage.getItem('tp-rag-records-v1')||'{}');
+          const record=saved.admins?.find(r=>r.account===target);
+          if(record){record.requiresPasswordChange=false;localStorage.setItem('tp-rag-records-v1',JSON.stringify(saved));}
+        }catch{/* Demo reminder state may remain until the next successful save. */}
+      }
       d.close();
       const status = document.createElement('p'); status.className = 'record-status'; status.role = 'status';
-      status.textContent = '已完成此帳號的示範密碼重置，未變更正式系統密碼。';
+      status.textContent = self?'已完成自己的示範密碼修改，未變更正式系統密碼。':'已完成此帳號的示範密碼重置，未變更正式系統密碼。';
       document.querySelector('#view-content').prepend(status);
     };
   }
@@ -104,11 +131,14 @@ window.backendAuth = (() => {
       desiredView = 'rag'; showLogin();
     };
     document.querySelector('.top-actions').append(logout);
+    const change=document.createElement('button');change.type='button';change.className='secondary-button';change.textContent='修改密碼';change.dataset.authChange='';
+    logout.before(change);
     document.addEventListener('click', e => {
+      if(e.target.closest('[data-auth-change]')){resetPassword(account,true);return;}
       const button = e.target.closest('[data-auth-reset]'); if (button) resetPassword(button.dataset.authReset);
     });
     if (current() && role()) { document.body.classList.remove('auth-pending'); setView(desiredView); }
     else { account = null; showLogin(); }
   }
-  return { mount, canReset };
+  return { mount, canReset, canCreateAccount: isSuper };
 })();

@@ -644,14 +644,14 @@ function renderQuestionnaireVersions() {
     <td>${badge(item.status)}</td>
     <td>${item.updated}</td>
     <td><div class="row-actions">
-      <button class="table-action" type="button" data-questionnaire-version="${item.version}">檢視／編輯</button>
-      <button class="table-action danger" type="button" ${item.status !== "已發布" ? "" : "disabled"}>刪除</button>
-      <button class="table-action" type="button">更多</button>
+      <button class="table-action" type="button" data-questionnaire-version="${item.version}">${item.status==='草稿'?'編輯草稿':'檢視'}</button>
+      <button class="table-action" type="button" data-questionnaire-copy="${item.version}">複製為草稿</button>
+      ${item.status==='草稿'?`<button class="table-action" type="button" data-questionnaire-publish="${item.version}">發布</button>`:''}
     </div></td>
   </tr>`);
   return [
     listHeader({ search: "搜尋問卷名稱、版本", filters: [{ label: "狀態", options: ["全部狀態", "已發布", "草稿", "停用"] }], button: "+ 建立問卷", actionAttr: 'data-questionnaire-version="new"' }),
-    section("問卷版本", "可建立多個問卷版本，但同時間只能有一份已發布問卷。", table(["問卷名稱", "欄位數", "必填數", "狀態", "最後更新", "操作"], rows, 980), "questionnaire versions"),
+    section("問卷版本", "已發布版本唯讀；複製為草稿後修改。確認發布時，新版生效、舊版自動停用，同時間只有一份已發布問卷。", table(["問卷名稱", "欄位數", "必填數", "狀態", "最後更新", "操作"], rows, 980), "questionnaire versions"),
   ].join("");
 }
 
@@ -756,7 +756,7 @@ function renderQuestionnaire() {
     ? renderQuestionnaireVersions()
     : renderQuestionnaireFields();
   return [
-    metricGrid([["已發布問卷", "1", "production 可用"], ["草稿問卷", "1", "待確認欄位"], ["欄位完整度", "7 / 8", "含選項與 payload key"], ["API 綁定", "2", "production / sandbox"]]),
+    metricGrid([["已發布問卷", String(questionnaires.filter(q=>q.status==='已發布').length), "production 可用"], ["草稿問卷", String(questionnaires.filter(q=>q.status==='草稿').length), "尚未發布"], ["欄位完整度", "7 / 8", "含選項與 payload key"], ["API 綁定", "2", "production / sandbox"]]),
     questionnaireTabs(questionnaireViewMode),
     body,
   ].join("");

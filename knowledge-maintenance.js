@@ -8,12 +8,13 @@
   if(!db.datasets.some(d=>d.id===breedSizeSeed.id))db.datasets.push(structuredClone(breedSizeSeed));
   let tab = 'data', type = 'templates', templateId = db.templates[0].id, query = '', status = '全部', notice = '';
   let pending = null, dirty = false, templateDraft = null, importMode = 'create';
+  let logFilters = {actor:'',field:'',from:'',to:''};
   const names = {templates:'營養標準模板',elements:'營養元素',...Object.fromEntries(db.datasets.map(d=>[d.id,d.name]))};
   const button = (label, attrs, primary=false) => `<button type="button" class="${primary?'primary-button':'secondary-button'}" ${attrs}>${esc(label)}</button>`;
   const options = (entries, selected) => entries.map(([v,n])=>`<option value="${esc(v)}" ${v===selected?'selected':''}>${esc(n)}</option>`).join('');
   const valueInput = (label, value, attr, numeric=false) => `<label>${esc(label)}<${numeric?'input':'textarea'} ${attr} ${numeric?`type="number" step="any" value="${esc(value)}"`:'rows="2"'}>${numeric?'':esc(value)}</${numeric?'input':'textarea'}></label>`;
   function persist(before, action, target, after) {
-    db.logs.unshift({time:new Date().toLocaleString('zh-TW'),actor:'示範管理員',action,target,before:structuredClone(before),after:structuredClone(after),context:{type,templateId:after?.items?after.id:templateId,recordId:after?.id||null,headers:selectedDataset()?.headers||null}});
+    db.logs.unshift({time:new Date().toLocaleString('zh-TW',{timeZone:'Asia/Taipei'}),at:new Date().toISOString(),actor:'示範管理員',action,target,before:structuredClone(before),after:structuredClone(after),context:{type,templateId:after?.items?after.id:templateId,recordId:after?.id||null,headers:selectedDataset()?.headers||null}});
     try { localStorage.setItem(key,JSON.stringify({schema:1,data:db})); notice='已儲存至本機示範資料。'; }
     catch { notice='本機儲存失敗；變更僅保留於本次畫面，重新整理後可能遺失。'; }
   }
@@ -95,23 +96,48 @@
     const rows=db.imports.map((r,i)=>`<tr><td>${esc(r.time)}</td><td>${esc(r.file)}</td><td>${esc(r.scope||'Excel 元素對應示範')}</td><td>${esc(r.count)}</td><td>${esc(r.type?'已匯入本機':'對應確認完成（示範）')}</td><td>${r.type?button('前往資料維護',`data-km-import-result="${i}"`):'—'}</td></tr>`);
     return section('檔案匯入與紀錄','集中處理批次建立／更新資料；手動維護與匯出請至資料維護。',upload)+section('匯入紀錄','查看檔案、處理範圍與結果；欄位前後差異請至異動明細。',rowsTable(['時間','來源檔案','匯入範圍','處理筆數','結果','操作'],rows));
   }
+  // Local date/time inputs and legacy display strings are interpreted in Taipei time.
+  function logBoundary(value) { return value ? Date.parse(value+':00+08:00') : null; }
+  function logTimestamp(record) {
+    if(record.at && Number.isFinite(Date.parse(record.at)))return Date.parse(record.at);
+    const raw=String(record.time||'').trim();
+    const m=raw.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})[ T]*(上午|下午)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if(!m)return NaN;
+    let hour=Number(m[5]);if(m[4])hour=hour%12+(m[4]==='下午'?12:0);
+    return Date.parse(m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0')+'T'+String(hour).padStart(2,'0')+':'+m[6]+':'+(m[7]||'00')+'+08:00');
+  }
+  function logTimeLabel(record) {
+    const at=logTimestamp(record);
+    if(!Number.isFinite(at))return '未提供時間';
+    return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date(at)).replace(/-/g,'/');
+  }
+  function matchesLog(record,changes,ctx) {
+    const contains=(value,needle)=>String(value||'').toLocaleLowerCase().includes(needle.toLocaleLowerCase());
+    if(logFilters.actor&&!contains(record.actor,logFilters.actor))return false;
+    if(logFilters.field&&!changes.some(c=>contains(fieldLabel(c.path,ctx),logFilters.field)||contains(c.path.join('.'),logFilters.field)))return false;
+    if(logFilters.from||logFilters.to){const at=logTimestamp(record);if(!Number.isFinite(at))return false;if(logFilters.from&&at<logBoundary(logFilters.from))return false;if(logFilters.to&&at>=logBoundary(logFilters.to)+60000)return false;}
+    return true;
+  }
   function logView() {
     const shown=logsForDisplay(),demo=shown.length>0&&shown[0].demo;
     const rows=shown.flatMap((r,i)=>{
       const ctx=logContext(r),changes=changedFields(r.before,r.after).filter(c=>!(ctx?.type==='犬生命階段判斷表'&&(r.after?.conditions||r.after?.lifeProfile)&&c.path[0]==='cells'&&[1,2,3,4].includes(Number(c.path[1]))));
-      if(!changes.length)return [];
+      if(!changes.length||!matchesLog(r,changes,ctx))return [];
       const side=which=>`<div class="km-change-list">${changes.map(c=>`<div class="km-change-item"><strong>${esc(fieldLabel(c.path,ctx))}</strong><code class="km-change-key">${esc(c.path.join('.'))}</code><div class="km-change-value">${esc(changeValue(c[which]))}</div></div>`).join('')}</div>`;
-      return [`<tr class="km-log-summary"><td class="km-disclosure-cell"><button type="button" data-km-log-toggle="${i}" aria-label="展開異動明細" title="展開異動明細" aria-expanded="false" aria-controls="km-log-detail-${i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button></td><td>${esc(r.time)}<br><small>${esc(r.actor)}</small></td><td>${esc(r.action)}<br><small>${esc(r.target)}</small></td><td>${changes.length} 個欄位<br><small>${esc(changes.slice(0,3).map(c=>fieldLabel(c.path,ctx)).join("、")+(changes.length>3?'，另 '+(changes.length-3)+' 項':''))}</small></td><td><div class="km-log-actions">${ctx?button("前往修改",`data-km-log-edit="${i}" data-km-log-path="${esc(JSON.stringify(changes[0].path))}"`):"來源已無法定位"}</div></td></tr><tr id="km-log-detail-${i}" class="km-log-detail" hidden><td colspan="5"><div class="km-log-comparison"><section><h3>修改前</h3>${side("before")}</section><section><h3>修改後</h3>${side("after")}</section></div></td></tr>`];
+      return [`<tr class="km-log-summary"><td class="km-disclosure-cell"><button type="button" data-km-log-toggle="${i}" aria-label="展開異動明細" title="展開異動明細" aria-expanded="false" aria-controls="km-log-detail-${i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button></td><td>${esc(logTimeLabel(r))}${r.demo?'<br><small>示範時間</small>':''}</td><td>${esc(r.actor)}</td><td>${esc(r.action)}<br><small>${esc(r.target)}</small></td><td>${changes.length} 個欄位<br><small>${esc(changes.slice(0,3).map(c=>fieldLabel(c.path,ctx)).join("、")+(changes.length>3?'，另 '+(changes.length-3)+' 項':''))}</small></td><td><div class="km-log-actions">${ctx?button("前往修改",`data-km-log-edit="${i}" data-km-log-path="${esc(JSON.stringify(changes[0].path))}"`):"來源已無法定位"}</div></td></tr><tr id="km-log-detail-${i}" class="km-log-detail" hidden><td colspan="6"><div class="km-log-comparison"><section><h3>修改前</h3>${side("before")}</section><section><h3>修改後</h3>${side("after")}</section></div></td></tr>`];
     });
-    return section('異動明細','每列為一次修改，展開查看本次變更的欄位、Key 與前後值。前往修改會開啟目前資料，不會自動還原舊值。',rowsTable(['<span class="km-sr-only">展開明細</span>','時間／操作者','動作／資料','異動摘要','操作'],rows));
+    const filters=`<form id="km-log-filters" class="km-toolbar km-log-filters"><label>操作者<input name="actor" value="${esc(logFilters.actor)}" placeholder="輸入操作者名稱"></label><label>操作欄位<input name="field" value="${esc(logFilters.field)}" placeholder="中文欄位名稱或 key"></label><label>異動開始時間<input name="from" type="datetime-local" value="${esc(logFilters.from)}"></label><label>異動結束時間<input name="to" type="datetime-local" value="${esc(logFilters.to)}"></label><div class="km-log-filter-actions"><button type="submit" class="primary-button">搜尋</button>${button('重設','data-km-log-reset')}</div><p id="km-log-filter-error" role="alert"></p></form>`;
+    const hint=`<p class="nutrition-footnote">多項條件需同時符合；異動時間以台北時間查詢，包含結束分鐘。${demo?'目前為示範紀錄，日期時間僅供畫面與搜尋測試，非真實異動。':''}</p>`;
+    return section('異動明細','每列為一次修改，展開查看本次變更的欄位、Key 與前後值。前往修改會開啟目前資料，不會自動還原舊值。',filters+hint+(rows.length?rowsTable(['<span class="km-sr-only">展開明細</span>','異動時間','操作者','動作／資料','異動摘要','操作'],rows):'<div class="nutrition-empty">沒有符合條件的異動紀錄。</div>'));
+
   }
   function logsForDisplay(){
     if(db.logs.some(r=>changedFields(r.before,r.after).length))return db.logs;
     // Presentation-only examples; never insert fabricated history into localStorage.
     const t=db.templates[0],e=db.elements[0],d=db.datasets[0],r=d?.records[0],examples=[];
-    if(t){const after=structuredClone(t),before=structuredClone(t);before.meta.備註='調整前的模板備註（示範）';before.meta.適用對象='調整前的適用對象（示範）';before.status=after.status==='啟用'?'停用':'啟用';if(before.items.length)before.items[0].value=typeof after.items[0].value==='number'?after.items[0].value+5:'調整前標準值（示範）';examples.push({demo:true,time:'示範紀錄',actor:'示範管理員',action:'修改模板（示範）',target:t.name,before,after,context:{type:'templates',templateId:t.id}});}
-    if(e){const after=structuredClone(e),before=structuredClone(e);before.aliases='調整前別名（示範）';examples.push({demo:true,time:'示範紀錄',actor:'示範管理員',action:'修改元素（示範）',target:e.name,before,after,context:{type:'elements',recordId:e.id}});}
-    if(r){const after=structuredClone(r),before=structuredClone(r);before.cells[2]='調整前數值（示範）';examples.push({demo:true,time:'示範紀錄',actor:'示範管理員',action:'修改資料（示範）',target:d.name+' / '+r.cells[0],before,after,context:{type:d.id,recordId:r.id,headers:d.headers}});}
+    if(t){const after=structuredClone(t),before=structuredClone(t);before.meta.備註='調整前的模板備註（示範）';before.meta.適用對象='調整前的適用對象（示範）';before.status=after.status==='啟用'?'停用':'啟用';if(before.items.length)before.items[0].value=typeof after.items[0].value==='number'?after.items[0].value+5:'調整前標準值（示範）';examples.push({demo:true,time:'2026/11/02 09:30:00',actor:'示範管理員',action:'修改模板（示範）',target:t.name,before,after,context:{type:'templates',templateId:t.id}});}
+    if(e){const after=structuredClone(e),before=structuredClone(e);before.aliases='調整前別名（示範）';examples.push({demo:true,time:'2026/11/02 09:20:00',actor:'示範管理員',action:'修改元素（示範）',target:e.name,before,after,context:{type:'elements',recordId:e.id}});}
+    if(r){const after=structuredClone(r),before=structuredClone(r);before.cells[2]='調整前數值（示範）';examples.push({demo:true,time:'2026/11/02 09:10:00',actor:'示範管理員',action:'修改資料（示範）',target:d.name+' / '+r.cells[0],before,after,context:{type:d.id,recordId:r.id,headers:d.headers}});}
     return examples;
   }
   function changedFields(before,after,path=[]) {
@@ -529,8 +555,17 @@
     });
   }
   ensureNutritionRules();
+  document.addEventListener('submit',e=>{
+    if(e.target.id!=='km-log-filters')return;
+    e.preventDefault();const f=new FormData(e.target),next=Object.fromEntries(['actor','field','from','to'].map(k=>[k,String(f.get(k)||'').trim()]));
+    const error=document.querySelector('#km-log-filter-error');
+    if((next.from&&!Number.isFinite(logBoundary(next.from)))||(next.to&&!Number.isFinite(logBoundary(next.to)))){error.textContent='請輸入有效的異動時間。';return;}
+    if(next.from&&next.to&&logBoundary(next.from)>logBoundary(next.to)){error.textContent='異動開始時間不可晚於結束時間。';return;}
+    logFilters=next;redraw();
+  });
   document.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b)return;
+    if(b.hasAttribute('data-km-log-reset')){logFilters={actor:'',field:'',from:'',to:''};redraw();return;}
     if(b.hasAttribute('data-rule-remove')){b.closest('[data-rule-row]').remove();const empty=document.querySelector('#km-rule-empty');if(empty)empty.hidden=!!document.querySelector('[data-rule-row]');dirty=true;return;}
     if(b.hasAttribute('data-km-close')){closeDialog();return;}
     if(b.dataset.kmNav){tab=b.dataset.kmNav;setView('rag');redraw();return;}

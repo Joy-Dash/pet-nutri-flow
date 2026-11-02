@@ -10,7 +10,7 @@
     admins: { title: '後台帳號', data: admins, id: 'account', fields: [['name','姓名'],['email','Email','email'],['account','帳號','text',true],['role','角色',()=>roles.map(r=>r.name)],['scope','權限摘要','text',true],['status','狀態',status]] },
     roles: { title: '角色權限', data: roles, id: 'id', fields: [['id','角色代碼','text',true],['name','角色名稱'],['description','說明'],['scope','權限範圍說明'],['accounts','套用帳號數','number',true],['status','狀態',status]] },
     fields: { title: '問卷欄位', data: questionFields, id: 'key', fields: [['name','欄位名稱'],['key','API Key（欄位代碼）','text'],['purpose','欄位用途'],['type','回答格式',['text','number','single_select','multi_select','slider','select']],['required','是否必填','checkbox'],['order','排序','number'],['status','狀態',['啟用','草稿','停用']],['api','Payload path']] },
-    versions: { title: '問卷版本', data: questionnaires, id: 'version', fields: [['name','問卷名稱'],['version','版本代碼','text',true],['usage','用途'],['status','狀態',['草稿','已發布','停用']]] },
+    versions: { title: '問卷版本', data: questionnaires, id: 'version', fields: [['name','問卷名稱'],['version','版本代碼','text',true],['usage','用途'],['status','狀態','text',true]] },
     rules: { title: '營養規則', data: nutritionRules, id: 'code', fields: [['code','規則代碼','text',true],['name','名稱'],['group','分類'],['condition','條件'],['action','動作'],['impact','影響'],['priority','優先序','number'],['status','狀態',['啟用','草稿','停用']]] },
     docs: { title: '檔案資料', data: ragDocs, id: 'file', fields: [['file','檔案名稱','text',true],['category','分類'],['version','版本'],['pipeline','處理方式','text',true],['index','索引狀態','text',true]] },
   };
@@ -79,6 +79,29 @@
     for(const field of questionFields){const group=optionGroups.find(g=>g.key===field.key);if(group)field.options=group.options.length;}
   } catch { /* Storage may be unavailable; editing remains available for this session. */ }
 
+
+  function versionFields(q) {
+    return q.composition.map(c=>{const f=questionFields.find(f=>f.key===c.key);if(!f)throw Error('找不到題目：'+c.key);return {...structuredClone(f),required:c.required,order:c.order,options:structuredClone(optionGroups.find(g=>g.key===c.key)?.options||[])};});
+  }
+  questionnaires.filter(q=>q.status!=='草稿').forEach(q=>{if(!q.fieldSnapshot)q.fieldSnapshot=versionFields(q);});
+  function copyVersion(key){
+    const source=questionnaires.find(q=>q.version===key);if(!source)return;
+    const copy=structuredClone(source);copy.version=source.version+'_copy_'+crypto.randomUUID().slice(0,8);copy.name=source.name+'（草稿）';copy.status='草稿';copy._created=true;delete copy.fieldSnapshot;copy.updated=new Date().toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
+    questionnaires.push(copy);persist();redraw();edit('versions',copy.version);
+  }
+  function publishVersion(key){
+    const q=questionnaires.find(q=>q.version===key);if(!q||q.status!=='草稿')return;
+    const previous=questionnaires.find(q=>q.status==='已發布');
+    const d=open('確認發布問卷','<p>即將發布「'+esc(q.name)+'」。'+(previous?'目前已發布的「'+esc(previous.name)+'」將自動停用。':'')+'同時間只會有一份已發布問卷；不需送審。</p>',()=>{
+      if(q.status!=='草稿')throw Error('僅草稿可發布。');
+      if(!q.composition?.length||new Set(q.composition.map(c=>c.order)).size!==q.composition.length)throw Error('請先修正題目組成與排序。');
+      const snapshot=versionFields(q);
+      questionnaires.filter(v=>v.status==='已發布').forEach(v=>{v.status='停用';});
+      q.status='已發布';q.fieldSnapshot=snapshot;q.updated=new Date().toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
+    });
+    d.querySelector('[type=submit]').textContent='確認發布';
+  }
+
   let active = null;
   function persist() {
     try {
@@ -95,7 +118,7 @@
     document.querySelector('#view-content').prepend(el);
   }
   function redraw() {
-    const id=document.querySelector('#nav .active')?.dataset.view;
+    const id=location.hash.slice(1)||document.querySelector('#nav .active')?.dataset.view;
     if (renderers[id]) document.querySelector('#view-content').innerHTML=renderers[id]();
   }
   function open(title, body, save) {
@@ -138,6 +161,7 @@
   function edit(entity,key) {
     const s=schemas[entity];if(!s)return;
     const isNew=key==='new';
+    if(entity==='admins'&&isNew&&!window.backendAuth?.canCreateAccount()){notify('只有最高管理員可以開通使用者帳號。');return;}
     const makeId=prefix=>prefix+'-'+crypto.randomUUID().slice(0,8);
     const defaults={
       members:{id:makeId('M'),account:'',name:'',email:'',phone:'',pets:0,lastCase:'—',status:'啟用'},
@@ -150,15 +174,21 @@
     };
     const item=isNew?{...defaults[entity],_created:true}:s.data.find(r=>String(r[s.id])===key);
     if(!item)return;
+    if(entity==='versions'&&!isNew&&item.status!=='草稿'){
+      const fields=item.fieldSnapshot||versionFields(item);
+      open('檢視問卷版本','<p class="nutrition-message">'+esc(item.status)+'版本為唯讀。需要修改時，請關閉後點選「複製為草稿」。</p>'+section(esc(item.name),esc(item.version)+' · '+esc(item.usage),table(['欄位','回答格式','必填','排序'],fields.map(f=>'<tr><td>'+esc(f.name)+'</td><td>'+esc(f.type)+'</td><td>'+(f.required?'是':'否')+'</td><td>'+f.order+'</td></tr>'),640)));return;
+    }
     if(entity==='pets'&&isNew&&!members.length){notify('請先新增會員，再建立寵物資料。');return;}
     const permissionsForItem=rolePermissionProfiles[item.id]||modules.map(m=>({moduleId:m.id,module:m.label,view:false,write:false,del:false}));
     let body=`<div class="form-grid">${s.fields.map(([k,l,t,ro])=>entity==='pets'&&k==='memberId'&&isNew?`<label>所屬會員<select name="memberId" required>${members.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}（${esc(m.id)}）</option>`).join('')}</select></label>`:control(k,l,t,item[k],ro&&!(isNew&&k===s.id))).join('')}</div>`;
+    if(entity==='admins'&&isNew)body='<p class="nutrition-message">由最高管理員以 Email 開通帳號，登入帳號自動使用 Email。使用者登入後會收到修改密碼提醒；示範不會寄送郵件。</p>'+body;
     if(entity==='members') {
       const pets=petProfiles.filter(p=>p.memberId===item.id);
       const cases=recommendationCases.filter(c=>c.memberId===item.id);
       body+=section('寵物清單','所屬寵物資料；可於「寵物資料」頁籤修改。',table(['寵物 ID','寵物名','物種','品種','年齡','體重','BCS','標籤'],pets.map(p=>`<tr>${[p.id,p.pet,p.species,p.breed,p.age,p.weight,p.bcs,p.tags.join('、')].map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`),720));
       body+=section('最近推薦案例','當次紀錄與結果可於「使用者推薦歷史紀錄」檢視。',table(['案例 ID','提交時間','問卷','狀態'],cases.map(c=>`<tr>${[c.id,c.submitted,c.survey,c.status].map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`),600));
     }
+    if(entity==='roles'){const assigned=admins.filter(a=>a.role===item.name);body='<p class="nutrition-message">'+(assigned.length?'此角色目前有 '+assigned.length+' 個帳號歸屬（'+assigned.map(a=>esc(a.name)).join('、')+'）。如要停用，請先到「後台帳號」將所有歸屬帳號改為其他角色；包含已停用的帳號。':'此角色目前沒有帳號歸屬，可停用。')+'</p>'+body;}
     if(entity==='roles')body+=section('模組權限','依目前模組設定進入、寫入與刪除權限；唯讀功能不提供寫入或刪除。',table(['模組','進入頁面','新增／編輯','刪除'],permissionsForItem.map((p,i)=>`<tr><td>${esc(p.module)}</td>${['view','write','del'].map(k=>`<td><input type="checkbox" name="permission-${i}-${k}" aria-label="${esc(p.module)} ${k}" ${p[k]?'checked':''} ${k==='write'&&['api-integration','api-monitoring','recommendation-cases'].includes(p.moduleId)||k==='del'&&!['admins','questionnaire','rag'].includes(p.moduleId)?'disabled':''}></td>`).join('')}</tr>`),640));
     const group=entity==='fields'?optionGroups.find(g=>g.key===key):null;
     const choiceTypes=['single_select','multi_select','select'];
@@ -191,6 +221,8 @@
         draft.options=options.length;
       }
       if(entity==='roles'){
+        const assigned=admins.filter(a=>a.role===item.name);
+        if(draft.status==='停用'&&assigned.length)throw Error('此角色仍有 '+assigned.length+' 個帳號歸屬，請先將所有帳號更改為其他角色，才能停用。');
         const permissions=permissionsForItem.map((p,i)=>({...p,...Object.fromEntries(['view','write','del'].map(k=>[k,form.elements.namedItem(`permission-${i}-${k}`).checked]))}));
         if(permissions.some(p=>(p.write||p.del)&&!p.view))throw Error('開放寫入或刪除時，必須同時開放進入頁面。');
         if(item.id==='super-admin'&&(draft.status!=='啟用'||permissions.some(p=>!p.view||(!['api-integration','api-monitoring','recommendation-cases'].includes(p.moduleId)&&!p.write)||(['admins','questionnaire','rag'].includes(p.moduleId)&&!p.del))))throw Error('系統管理員角色必須維持啟用及各模組可用的完整權限。');
@@ -198,7 +230,9 @@
         admins.filter(a=>a.role===item.name).forEach(a=>{a.role=draft.name;a.scope=draft.scope;});
       }
       if(entity==='admins'){
-        const chosen=roles.find(r=>r.name===draft.role);draft.scope=chosen?.scope||draft.scope;
+        if(isNew){if(!window.backendAuth?.canCreateAccount())throw Error('只有最高管理員可以開通使用者帳號。');draft.account=draft.email;draft.requiresPasswordChange=true;}
+        if(admins.some(a=>a!==item&&a.email.toLowerCase()===draft.email.toLowerCase()))throw Error('此 Email 已有帳號，請使用其他 Email。');
+        const chosen=roles.find(r=>r.name===draft.role);if(!chosen||chosen.status!=='啟用')throw Error('請選擇啟用中的角色。');draft.scope=chosen.scope;
         if(item.role==='Super Admin'&&(draft.role!=='Super Admin'||draft.status!=='啟用')&&!admins.some(a=>a!==item&&a.role==='Super Admin'&&a.status==='啟用'))throw Error('至少需要保留一位啟用的系統管理員。');
       }
       if(entity==='pets'){
@@ -206,10 +240,8 @@
         if(draft.weight&&(!Number.isFinite(Number(draft.weight.replace(/\s*kg$/i,'')))||Number(draft.weight.replace(/\s*kg$/i,''))<=0))throw Error('體重請填寫大於 0 的數值，可加 kg。');
       }
       if(entity==='versions'){
-        if(draft.status==='已發布'){
-          const published=questionnaires.find(q=>q!==item&&q.status==='已發布');
-          if(published)throw Error('同時間只能有一份已發布問卷。目前已發布：'+published.name+'。請先處理目前已發布版本，再發布其他問卷。');
-        }
+        if(!isNew&&item.status!=='草稿')throw Error('僅草稿可以修改。');
+        draft.status='草稿';
         draft.composition=questionFields.flatMap((f,i)=>form.elements.namedItem(`include-${i}`).checked?[{key:f.key,required:form.elements.namedItem(`required-${i}`).checked,order:Number(form.elements.namedItem(`order-${i}`).value)}]:[]).sort((a,b)=>a.order-b.order);
         if(!draft.composition.length)throw Error('問卷至少需要一個欄位。');
         if(new Set(draft.composition.map(c=>c.order)).size!==draft.composition.length)throw Error('欄位排序不可重複。');
@@ -225,6 +257,12 @@
       if(entity==='pets')members.forEach(m=>m.pets=petProfiles.filter(p=>p.memberId===m.id).length);
       roles.forEach(r=>r.accounts=admins.filter(a=>a.role===r.name).length);
     });
+    if(entity==='admins'&&isNew&&editor){
+      const email=editor.querySelector('[name="email"]'),account=editor.querySelector('[name="account"]');
+      account.readOnly=true;account.placeholder='由 Email 自動帶入';
+      const role=editor.querySelector('[name=role]');role.insertAdjacentHTML('afterbegin','<option value="">請選擇角色</option>');role.value='';role.required=true;
+      email.addEventListener('input',()=>account.value=email.value.trim());
+    }
     if(entity==='fields'&&editor){
       const list=editor.querySelector('[data-option-list]'),format=editor.querySelector('[name="type"]');
       function captureOptions(){optionDraft=Array.from(list.querySelectorAll('[data-option-row]')).map(row=>({label:row.querySelector('[data-option-label]').value,value:row.querySelector('[data-option-value]').value}));}
@@ -252,6 +290,8 @@
     if(b.hasAttribute('data-member-detail'))action=()=>edit('members',b.dataset.memberDetail);
     if(b.hasAttribute('data-role-detail'))action=()=>edit('roles',b.dataset.roleDetail);
     if(b.hasAttribute('data-question-field'))action=()=>edit('fields',b.dataset.questionField);
+    if(b.hasAttribute('data-questionnaire-copy'))action=()=>copyVersion(b.dataset.questionnaireCopy);
+    if(b.hasAttribute('data-questionnaire-publish'))action=()=>publishVersion(b.dataset.questionnairePublish);
     if(b.hasAttribute('data-questionnaire-version'))action=()=>edit('versions',b.dataset.questionnaireVersion);
     if(b.hasAttribute('data-case-detail'))action=()=>showCase(b.dataset.caseDetail);
     if(b.hasAttribute('data-api-log'))action=()=>{selectedApiLogIndex=b.dataset.apiLog;readonly('檢視 API 監控紀錄',renderApiLogDetail());};

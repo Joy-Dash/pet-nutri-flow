@@ -6,7 +6,7 @@
     {id:'schema', name:'問卷設定', method:'GET', path:'/v1/questionnaire/schema', purpose:'取得已發布問卷的題目、選項、必填與排序。', source:'已發布問卷', fields:['問卷版本','欄位','選項','必填','排序'], dynamic:true},
   ];
   const button = (label, attr, style='secondary-button') => `<button type="button" class="${style}" ${attr}>${esc(label)}</button>`;
-  const schema = () => ({version: questionnaires[0].version, fields: questionFields.filter(f=>f.status==='啟用').map(f=>({key:f.key,label:f.name,type:f.type,required:f.required,order:f.order,...(optionGroups.find(g=>g.key===f.key)?{options:optionGroups.find(g=>g.key===f.key).options.map(([label,value])=>({label,value}))}:{})}))});
+  const schema = () => {const q=questionnaires.find(q=>q.status==='已發布');return {version:q?.version||null,fields:(q?.fieldSnapshot||[]).map(f=>({key:f.key,label:f.name,type:f.type,required:f.required,order:f.order,...(f.options?.length?{options:f.options.map(([label,value])=>({label,value}))}:{})}))};};
   function payloadExamples() {return {request:{headers:{'x-api-key':'<由工程人員提供>'}},response:schema()};}
   const success = data => ({success:true,message:'請求成功',data,traceId:'demo-trace-id'});
   const failure = {success:false,message:'缺少有效的 API 金鑰',data:null,error:{code:'unauthorized'},traceId:'demo-trace-id'};
