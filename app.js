@@ -651,7 +651,7 @@ function renderQuestionnaireVersions() {
   </tr>`);
   return [
     listHeader({ search: "搜尋問卷名稱、版本", filters: [{ label: "狀態", options: ["全部狀態", "已發布", "草稿", "停用"] }], button: "+ 建立問卷", actionAttr: 'data-questionnaire-version="new"' }),
-    section("問卷版本", "一份問卷由欄位庫中的欄位組合而成，可依不同前台情境建立不同版本。", table(["問卷名稱", "欄位數", "必填數", "狀態", "最後更新", "操作"], rows, 980), "questionnaire versions"),
+    section("問卷版本", "可建立多個問卷版本，但同時間只能有一份已發布問卷。", table(["問卷名稱", "欄位數", "必填數", "狀態", "最後更新", "操作"], rows, 980), "questionnaire versions"),
   ].join("");
 }
 
@@ -1200,5 +1200,5 @@ function init() {
     }
   });
   const initial = window.location.hash.replace("#", "") === "nutrition-templates" ? "nutrition-rules" : window.location.hash.replace("#", "");
-  setView(modules.some((item) => item.id === initial) ? initial : "recommendation-cases");
+  setView(modules.some((item) => item.id === initial) ? initial : "rag");
 }

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./nutrition.css?v=20261029-priority" />
     <link rel="stylesheet" href="./knowledge-maintenance.css" />
   </head>
-  <body>
+  <body class="auth-pending">
     <div class="app-shell">
       <aside class="sidebar" aria-label="後台主選單">
         <div class="brand">
@@ -36,7 +36,7 @@
             <span class="environment-badge">Demo 環境</span>
             <label class="global-search">
               <span>全域搜尋</span>
-              <input type="search" placeholder="案例 ID、API Key、欄位名稱、會員..." />
+              <input type="search" placeholder="案例 ID、API Key、欄位名稱、訪客..." />
             </label>
             <button class="account-menu" type="button" aria-label="目前登入管理者">
               <span class="avatar">管</span>
@@ -65,6 +65,7 @@
     <script src="./breed-size-data.js"></script>
     <script src="./knowledge-maintenance.js"></script>
     <script src="./api-management.js"></script>
-    <script>init();</script>
+    <script src="./auth.js"></script>
+    <script>init(); backendAuth.mount();</script>
   </body>
 </html>

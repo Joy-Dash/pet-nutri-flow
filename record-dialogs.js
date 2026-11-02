@@ -206,6 +206,10 @@
         if(draft.weight&&(!Number.isFinite(Number(draft.weight.replace(/\s*kg$/i,'')))||Number(draft.weight.replace(/\s*kg$/i,''))<=0))throw Error('體重請填寫大於 0 的數值，可加 kg。');
       }
       if(entity==='versions'){
+        if(draft.status==='已發布'){
+          const published=questionnaires.find(q=>q!==item&&q.status==='已發布');
+          if(published)throw Error('同時間只能有一份已發布問卷。目前已發布：'+published.name+'。請先處理目前已發布版本，再發布其他問卷。');
+        }
         draft.composition=questionFields.flatMap((f,i)=>form.elements.namedItem(`include-${i}`).checked?[{key:f.key,required:form.elements.namedItem(`required-${i}`).checked,order:Number(form.elements.namedItem(`order-${i}`).value)}]:[]).sort((a,b)=>a.order-b.order);
         if(!draft.composition.length)throw Error('問卷至少需要一個欄位。');
         if(new Set(draft.composition.map(c=>c.order)).size!==draft.composition.length)throw Error('欄位排序不可重複。');
