@@ -87,3 +87,63 @@ details.km-condition-card{border:1px solid var(--line);border-radius:8px;margin:
 #km-log-filter-error { flex-basis: 100%; color: var(--red); margin: 0; font-size: 13px; }
 #km-log-filter-error:empty { display: none; }
 @media(max-width: 600px) { .km-log-filters label { flex-basis: 100%; } .km-log-filter-actions { width: 100%; } }
+.km-section-actions h3+span{font-size:13px;color:var(--muted)}
+.km-species-bar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 24px}
+.km-species-tabs{display:flex;flex-wrap:wrap;gap:8px}
+.km-species-tabs [aria-pressed="true"]{background:#e3f2fc;border-color:#82c5ec;color:#075a86;font-weight:700}
+.km-dialog.km-species-dialog{width:min(560px,94vw)}
+.km-species-manager ul{list-style:none;margin:0;padding:0}
+.km-species-manager li{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding:12px 0}
+.km-dialog .km-age-stage{min-width:0;background:#f8fafc}
+.km-age-stage legend{padding:0 8px;font-size:14px;font-weight:600}
+.km-age-stage [hidden]{display:none!important}
+.km-age-stage .km-record-grid{grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:12px}
+.km-age-stage [data-age-preview]{margin:12px 0 0;padding:0}
+.km-template-conditions{padding:18px 24px;border-top:1px solid var(--line)}
+.km-template-conditions h3{margin:0 0 12px;font-size:15px}
+.km-template-conditions .km-template-scope{padding:0;margin:0;border:0;align-items:start}
+.km-template-conditions .km-scope-extra{grid-column:1/-1}
+.km-scope-extra textarea{width:100%;border:1px solid var(--line-strong);border-radius:6px;padding:10px;font:inherit;resize:vertical}
+.km-scope-multiple{position:relative;display:grid;gap:8px;min-width:0;font-size:13px;color:var(--muted)}
+.km-scope-picker{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;min-height:42px;padding:10px;border:1px solid var(--line-strong);border-radius:6px;background:white;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.km-scope-picker:disabled{opacity:.6;cursor:default}
+.km-scope-picker span{overflow-wrap:anywhere}
+.km-scope-picker::after{content:"";width:6px;height:6px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg);flex:none}
+.km-scope-options{position:absolute;z-index:15;top:calc(100% + 4px);inset-inline:0;max-height:230px;overflow:auto;padding:4px;border:1px solid var(--line-strong);border-radius:6px;background:white;box-shadow:var(--shadow-md)}
+.km-scope-options label{display:flex;align-items:center;justify-content:flex-start;gap:8px;min-height:36px;padding:6px 8px;color:var(--ink);cursor:pointer}
+.km-scope-options label:hover,.km-scope-options label:focus-within{background:#e7f4fc}
+.km-scope-options label input[type="checkbox"]{flex:0 0 16px;width:16px;min-width:16px;height:16px;min-height:16px;margin:0;padding:0}
+.km-template-conditions dd{white-space:pre-wrap;overflow-wrap:anywhere}
+.km-create-template .km-template-conditions{margin-top:18px;padding:18px 0}
+.km-create-template-meta{border-top:1px solid var(--line)}
+.km-activity-targets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.km-activity-targets fieldset{min-width:0;margin:0}
+.km-dialog.km-page-editor.km-record-dialog{box-sizing:border-box;width:100%;max-width:none;max-height:none;overflow:visible;margin:0;background:var(--surface,#fff);box-shadow:none}
+.km-page-editor form{min-width:0}
+.km-page-editor header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.km-health-lock,.km-health-lock [data-health-limit]{display:grid;gap:6px}
+.km-health-lock [data-health-limit][hidden]{display:none}
+.km-health-table{min-width:0;border:1px solid var(--line);border-radius:8px}
+.km-health-table table{width:100%;min-width:0;table-layout:fixed}
+.km-health-col-nutrient{width:20%}
+.km-health-col-stage{width:9%}
+.km-health-col-lock{width:16%}
+.km-health-col-action{width:4.5rem}
+.km-health-table th,.km-health-table td{min-width:0;padding:8px 6px;vertical-align:top;white-space:normal;overflow-wrap:anywhere}
+.km-health-table td input,.km-health-table td select{width:100%;min-width:0;box-sizing:border-box;padding-inline:6px}
+.km-health-table td button{max-width:100%;padding-inline:6px;white-space:normal}
+.km-stool-nutrition-table .km-health-col-nutrient{width:22%}
+.km-stool-nutrition-table .km-health-col-stage{width:auto}
+.km-stool-nutrition-table .km-health-col-lock{width:13%}
+.km-stool-nutrition-table .km-health-col-action{width:4.5rem}
+.km-stool-nutrition-table :is(th,td){padding-inline:8px}
+.km-stool-nutrition-table :is(th,td):last-child{text-align:center}
+.km-stool-nutrition-table tbody tr:nth-child(even){background:#f8fafc}
+.km-stool-nutrition-table tbody tr:focus-within{background:#eef7fd}
+.km-stool-nutrition-table td:nth-child(n+2):nth-child(-n+5) input{font-variant-numeric:tabular-nums}
+@media(max-width:650px){
+  .km-stool-nutrition-table :is(th,td){padding-inline:3px}
+  .km-stool-nutrition-table .km-health-col-action{width:2.75rem}
+  .km-stool-nutrition-table .km-health-col-lock{width:19%}
+}
+@media(max-width:650px){.km-activity-targets{grid-template-columns:1fr}}

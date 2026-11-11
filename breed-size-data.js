@@ -30,3 +30,28 @@ const breedSizeSeed = {
     {id:'size-xl',size:'超大型犬',min:45,max:'',minIncluded:'不包含',maxIncluded:'不適用'}
   ]
 };
+
+const speciesSeed = [
+  {id:'dog',name:'犬',status:'啟用'},
+  {id:'cat',name:'貓',status:'啟用'}
+];
+
+const catSizeSeed = {
+  records:[
+    ['新加坡貓','','直接指定','小型貓','','',''],
+    ['德文卷毛貓','','直接指定','小型貓','中型貓','',''],
+    ['米克斯 / 家貓','','依體重判定','','','',''],
+    ['美國短毛貓','','直接指定','中型貓','','',''],
+    ['英國短毛貓','','直接指定','中大型貓','','',''],
+    ['緬因貓','','直接指定','大型貓','','',''],
+    ['挪威森林貓','','直接指定','大型貓','','','']
+  ].map((cells,i)=>({id:'breed-cat-'+i,speciesId:'cat',cells,children:[],status:'啟用'})),
+  weightStandards:[
+    ['xs','超小型貓','',''],
+    ['s','小型貓',0,3.5],
+    ['m','中型貓',3.6,5.5],
+    ['ml','中大型貓',5.6,6.5],
+    ['l','大型貓',6.6,''],
+    ['xl','超大型貓','','']
+  ].map(([id,size,min,max])=>({id:'size-cat-'+id,speciesId:'cat',size,min,max,minIncluded:min===''?'待確認':'包含',maxIncluded:max===''?'不適用':'包含'}))
+};

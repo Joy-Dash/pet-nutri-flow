@@ -1372,3 +1372,5 @@ body:has(dialog[open]) { overflow: hidden; }
 
 /* Engineering specification entry, works on Pages and local downloads. */
 .top-actions .spec-link { text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; }
+
+.top-actions .account-menu { cursor: default; }

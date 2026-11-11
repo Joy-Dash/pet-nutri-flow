@@ -32,7 +32,7 @@
       rolePermissionProfiles[roleId]=modules.map((module,index)=>{
         const previous=permissions.find(p=>p.moduleId===module.id||p.module===module.label||formerModuleIds[p.module]===module.id)||permissions[index];
         const editable=!["api-integration","api-monitoring","recommendation-cases"].includes(module.id);
-        const deletable=["admins","questionnaire","rag"].includes(module.id);
+        const deletable=["questionnaire","rag"].includes(module.id);
         return {moduleId:module.id,module:module.label,view:roleId==='super-admin'?true:!!previous?.view,write:editable&&(roleId==='super-admin'||!!previous?.write),del:deletable&&(roleId==='super-admin'||!!previous?.del)};
       });
     }
@@ -95,6 +95,8 @@
     const d=open('確認發布問卷','<p>即將發布「'+esc(q.name)+'」。'+(previous?'目前已發布的「'+esc(previous.name)+'」將自動停用。':'')+'同時間只會有一份已發布問卷；不需送審。</p>',()=>{
       if(q.status!=='草稿')throw Error('僅草稿可發布。');
       if(!q.composition?.length||new Set(q.composition.map(c=>c.order)).size!==q.composition.length)throw Error('請先修正題目組成與排序。');
+      const unavailable=q.composition.filter(c=>questionFields.find(f=>f.key===c.key)?.status!=='啟用');
+      if(unavailable.length)throw Error('無法發布：下列題目尚未啟用或已不存在：'+unavailable.map(c=>questionFields.find(f=>f.key===c.key)?.name||c.key).join('、')+'。請先啟用題目或自問卷移除。');
       const snapshot=versionFields(q);
       questionnaires.filter(v=>v.status==='已發布').forEach(v=>{v.status='停用';});
       q.status='已發布';q.fieldSnapshot=snapshot;q.updated=new Date().toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
@@ -189,7 +191,7 @@
       body+=section('最近推薦案例','當次紀錄與結果可於「使用者推薦歷史紀錄」檢視。',table(['案例 ID','提交時間','問卷','狀態'],cases.map(c=>`<tr>${[c.id,c.submitted,c.survey,c.status].map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`),600));
     }
     if(entity==='roles'){const assigned=admins.filter(a=>a.role===item.name);body='<p class="nutrition-message">'+(assigned.length?'此角色目前有 '+assigned.length+' 個帳號歸屬（'+assigned.map(a=>esc(a.name)).join('、')+'）。如要停用，請先到「後台帳號」將所有歸屬帳號改為其他角色；包含已停用的帳號。':'此角色目前沒有帳號歸屬，可停用。')+'</p>'+body;}
-    if(entity==='roles')body+=section('模組權限','依目前模組設定進入、寫入與刪除權限；唯讀功能不提供寫入或刪除。',table(['模組','進入頁面','新增／編輯','刪除'],permissionsForItem.map((p,i)=>`<tr><td>${esc(p.module)}</td>${['view','write','del'].map(k=>`<td><input type="checkbox" name="permission-${i}-${k}" aria-label="${esc(p.module)} ${k}" ${p[k]?'checked':''} ${k==='write'&&['api-integration','api-monitoring','recommendation-cases'].includes(p.moduleId)||k==='del'&&!['admins','questionnaire','rag'].includes(p.moduleId)?'disabled':''}></td>`).join('')}</tr>`),640));
+    if(entity==='roles')body+=section('模組權限','依目前模組設定進入、寫入與刪除權限；唯讀功能不提供寫入或刪除。',table(['模組','進入頁面','新增／編輯','刪除'],permissionsForItem.map((p,i)=>`<tr><td>${esc(p.module)}</td>${['view','write','del'].map(k=>`<td><input type="checkbox" name="permission-${i}-${k}" aria-label="${esc(p.module)} ${k}" ${p[k]?'checked':''} ${k==='write'&&['api-integration','api-monitoring','recommendation-cases'].includes(p.moduleId)||k==='del'&&!['questionnaire','rag'].includes(p.moduleId)?'disabled':''}></td>`).join('')}</tr>`),640));
     const group=entity==='fields'?optionGroups.find(g=>g.key===key):null;
     const choiceTypes=['single_select','multi_select','select'];
     let optionDraft=(group?.options||[]).map(([label,value])=>({label,value}));
@@ -203,7 +205,7 @@
     }
     if(entity==='versions') {
       const composition=item.composition||[];
-      body+=section('問卷欄位組合','勾選使用欄位，設定本問卷必填與排序；不會修改欄位庫。',table(['使用','欄位','本問卷必填','排序'],questionFields.map((f,i)=>{const c=composition.find(c=>c.key===f.key);return `<tr><td><input type="checkbox" name="include-${i}" aria-label="使用 ${esc(f.name)}" ${c?'checked':''}></td><td>${esc(f.name)}<br><code>${esc(f.key)}</code></td><td><input type="checkbox" name="required-${i}" aria-label="${esc(f.name)} 必填" ${c?.required?'checked':''}></td><td><input type="number" min="1" step="1" name="order-${i}" aria-label="${esc(f.name)} 排序" value="${c?.order||i+1}"></td></tr>`;}),640));
+      body+=section('問卷欄位組合','勾選使用欄位，設定本問卷必填與排序；不會修改欄位庫。',table(['使用','欄位','本問卷必填','排序'],questionFields.map((f,i)=>{const c=composition.find(c=>c.key===f.key);return `<tr><td><input type="checkbox" name="include-${i}" aria-label="使用 ${esc(f.name)}" ${c?'checked':''} ${f.status==='停用'&&!c?'disabled':''}></td><td>${esc(f.name)}<br><code>${esc(f.key)}</code></td><td><input type="checkbox" name="required-${i}" aria-label="${esc(f.name)} 必填" ${c?.required?'checked':''}></td><td><input type="number" min="1" step="1" name="order-${i}" aria-label="${esc(f.name)} 排序" value="${c?.order||i+1}"></td></tr>`;}),640));
     }
     const editor=open(`${isNew?'新增': '檢視／編輯'}${s.title}`,body,form=>{
       const draft={...item};
@@ -225,7 +227,7 @@
         if(draft.status==='停用'&&assigned.length)throw Error('此角色仍有 '+assigned.length+' 個帳號歸屬，請先將所有帳號更改為其他角色，才能停用。');
         const permissions=permissionsForItem.map((p,i)=>({...p,...Object.fromEntries(['view','write','del'].map(k=>[k,form.elements.namedItem(`permission-${i}-${k}`).checked]))}));
         if(permissions.some(p=>(p.write||p.del)&&!p.view))throw Error('開放寫入或刪除時，必須同時開放進入頁面。');
-        if(item.id==='super-admin'&&(draft.status!=='啟用'||permissions.some(p=>!p.view||(!['api-integration','api-monitoring','recommendation-cases'].includes(p.moduleId)&&!p.write)||(['admins','questionnaire','rag'].includes(p.moduleId)&&!p.del))))throw Error('系統管理員角色必須維持啟用及各模組可用的完整權限。');
+        if(item.id==='super-admin'&&(draft.status!=='啟用'||permissions.some(p=>!p.view||(!['api-integration','api-monitoring','recommendation-cases'].includes(p.moduleId)&&!p.write)||(['questionnaire','rag'].includes(p.moduleId)&&!p.del))))throw Error('系統管理員角色必須維持啟用及各模組可用的完整權限。');
         rolePermissionProfiles[draft.id]=permissions;
         admins.filter(a=>a.role===item.name).forEach(a=>{a.role=draft.name;a.scope=draft.scope;});
       }
@@ -243,6 +245,8 @@
         if(!isNew&&item.status!=='草稿')throw Error('僅草稿可以修改。');
         draft.status='草稿';
         draft.composition=questionFields.flatMap((f,i)=>form.elements.namedItem(`include-${i}`).checked?[{key:f.key,required:form.elements.namedItem(`required-${i}`).checked,order:Number(form.elements.namedItem(`order-${i}`).value)}]:[]).sort((a,b)=>a.order-b.order);
+        const newlyStopped=draft.composition.filter(c=>questionFields.find(f=>f.key===c.key)?.status==='停用'&&!item.composition?.some(old=>old.key===c.key));
+        if(newlyStopped.length)throw Error('不可新增選用停用題目。');
         if(!draft.composition.length)throw Error('問卷至少需要一個欄位。');
         if(new Set(draft.composition.map(c=>c.order)).size!==draft.composition.length)throw Error('欄位排序不可重複。');
         draft.fields=draft.composition.length;draft.required=draft.composition.filter(c=>c.required).length;draft.updated=new Date().toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});

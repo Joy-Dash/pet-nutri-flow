@@ -36,7 +36,7 @@ const roles = [
 ];
 
 const rolePermissionProfiles = {
-  "super-admin": modules.map((item) => ({ moduleId: item.id, module: item.label, view: true, write: !["api-integration", "api-monitoring", "recommendation-cases"].includes(item.id), del: ["admins", "questionnaire", "rag"].includes(item.id) })),
+  "super-admin": modules.map((item) => ({ moduleId: item.id, module: item.label, view: true, write: !["api-integration", "api-monitoring", "recommendation-cases"].includes(item.id), del: ["questionnaire", "rag"].includes(item.id) })),
   nutritionist: modules.map((item) => ({
     moduleId: item.id, module: item.label,
     view: ["questionnaire", "nutrition-rules", "rag", "recommendation-cases"].includes(item.id),
@@ -237,8 +237,8 @@ function switchCell(on) {
 function actions({ view = true, edit = true, del = true, more = false, entity = "", key = "" } = {}) {
   return `<div class="row-actions">
     <button class="table-action" type="button" data-record-entity="${entity}" data-record-key="${escapeHtml(key)}" ${view || edit ? "" : "disabled"}>${edit ? "檢視／編輯" : "檢視"}</button>
-    <button class="table-action danger" type="button" ${del ? "" : "disabled"}>刪除</button>
-    ${more ? `<button class="table-action" type="button">更多</button>` : ""}
+    ${["admins","roles"].includes(entity)?"":`<button class="table-action danger" type="button" ${del ? "" : "disabled"}>刪除</button>`}
+    
   </div>`;
 }
 
@@ -273,22 +273,35 @@ function selectOptions(options, current) {
 }
 
 function table(headers, rows, minWidth = 880) {
-  return `<div class="table-wrap"><table style="min-width:${minWidth}px"><thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  return `<div class="table-wrap"><table style="min-width:${minWidth}px"><thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.length?rows.join(""):`<tr><td colspan="${headers.length}" class="muted-text">沒有符合條件的資料。</td></tr>`}</tbody></table></div>`;
 }
 
 function metricGrid(items, klass = "") {
   return `<div class="summary-strip ${klass}">${items.map(([label, value, note]) => `<div class="summary-item"><span>${label}</span><strong>${value}</strong><em>${note}</em></div>`).join("")}</div>`;
 }
 
-function listHeader({ search, filters = [], button, actionAttr = "" }) {
-  return `<div class="list-header">
-    <div class="toolbar">
-      <input type="search" placeholder="${escapeHtml(search)}" />
-      ${filters.map((filter) => `<select aria-label="${escapeHtml(filter.label)}">${filter.options.map((option) => `<option>${escapeHtml(option)}</option>`).join("")}</select>`).join("")}
-    </div>
-    <button class="primary-button" type="button" ${actionAttr}>${escapeHtml(button)}</button>
-  </div>`;
+const listQueries = Object.create(null);
+const listFormats = {text:'輸入框',number:'數字',select:'下拉選單',single_select:'單選',multi_select:'多選',slider:'滑桿'};
+function listMatches(scope, values, filterValues) {
+  const state=listQueries[scope]||{query:'',filters:[]};
+  const text=values.map(v=>String(v??'')).join(' ').toLowerCase();
+  return (!state.query||text.includes(state.query.toLowerCase()))&&filterValues.every((value,i)=>!state.filters[i]||state.filters[i].startsWith('全部')||state.filters[i]===value);
 }
+function listHeader({ search, filters = [], button, actionAttr = '', queryKey = '' }) {
+  const state=listQueries[queryKey]||{query:'',filters:[]};
+  return `<div class="list-header"><div class="toolbar" ${queryKey?'data-list-query="'+queryKey+'"':''}>
+    <input type="search" aria-label="${escapeHtml(search)}" placeholder="${escapeHtml(search)}" value="${escapeHtml(state.query)}">
+    ${filters.map((filter,i)=>`<select aria-label="${escapeHtml(filter.label)}">${selectOptions(filter.options,state.filters[i]||filter.options[0])}</select>`).join('')}
+    ${queryKey?'<button class="secondary-button" type="button" data-list-search>搜尋</button><button class="secondary-button" type="button" data-list-reset>重設</button>':''}
+    </div><button class="primary-button" type="button" ${actionAttr}>${escapeHtml(button)}</button></div>`;
+}
+function updateListQuery(toolbar, reset=false) {
+  const scope=toolbar.dataset.listQuery;
+  listQueries[scope]=reset?{query:'',filters:[]}:{query:toolbar.querySelector('input').value.trim(),filters:[...toolbar.querySelectorAll('select')].map(s=>s.value)};
+  const id=location.hash.slice(1);document.querySelector('#view-content').innerHTML=renderers[id]();
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-list-search],[data-list-reset]');if(b)updateListQuery(b.closest('[data-list-query]'),b.hasAttribute('data-list-reset'));});
+document.addEventListener('keydown',e=>{const toolbar=e.target.closest('[data-list-query]');if(toolbar&&e.target.matches('input')&&e.key==='Enter'){e.preventDefault();updateListQuery(toolbar);}});
 
 function section(title, subtitle, body, badgeText = "") {
   return `<section class="panel">
@@ -403,7 +416,7 @@ function renderMemberDetail() {
 function renderAdmins() {
   if (adminViewMode === "role-detail") return renderRoleDetail();
 
-  const accountRows = admins.map((a) => `<tr>
+  const accountRows = admins.filter(a=>listMatches("accounts",[a.name,a.email,a.account,a.role],[a.role])).map((a) => `<tr>
     <td><strong>${a.name}</strong></td>
     <td>${a.email}</td>
     <td>${a.account}</td>
@@ -412,7 +425,7 @@ function renderAdmins() {
     <td>${badge(a.status)}</td>
     <td>${actions({ entity: "admins", key: a.account, del: a.role !== "Super Admin" })}</td>
   </tr>`);
-  const roleRows = roles.map((role) => `<tr>
+  const roleRows = roles.filter(r=>listMatches("roles",[r.name,r.scope],[r.status])).map((role) => `<tr>
     <td><button class="link-button" type="button" data-role-detail="${role.id}">${role.name}</button></td>
     <td>${role.description}</td>
     <td>${role.scope}</td>
@@ -422,11 +435,11 @@ function renderAdmins() {
   </tr>`);
   const body = adminViewMode === "roles"
     ? [
-        listHeader({ search: "搜尋角色名稱、權限範圍", filters: [{ label: "狀態", options: ["全部狀態", "啟用", "停用"] }], button: "+ 新增角色" }),
+        listHeader({ queryKey:"roles", search: "搜尋角色名稱、權限範圍", filters: [{ label: "狀態", options: ["全部狀態", "啟用", "停用"] }], button: "+ 新增角色" }),
         section("角色清單", "帳號套用角色；點擊角色名稱後進入角色明細並編輯模組權限。", table(["角色", "說明", "權限範圍", "套用帳號數", "狀態", "操作"], roleRows, 980), "roles"),
       ].join("")
     : [
-        listHeader({ search: "搜尋姓名、Email、帳號、角色", filters: [{ label: "角色", options: ["全部角色", "Super Admin", "營養師", "工程", "唯讀"] }], button: "+ 新增帳號" }),
+        listHeader({ queryKey:"accounts", search: "搜尋姓名、Email、帳號、角色", filters: [{ label: "角色", options: ["全部角色", ...roles.map(r=>r.name)] }], button: "+ 新增帳號" }),
         section("後台帳號", "進入此頁先看到目前所有後台帳號；帳號透過角色取得權限。", table(["姓名", "Email", "帳號", "角色", "權限摘要", "狀態", "操作"], accountRows), "accounts"),
       ].join("");
   return [
@@ -484,7 +497,7 @@ function renderApiIntegration() {
     <td><div class="row-actions">
       <button class="table-action" type="button" data-api-edit="${api.name}">編輯</button>
       <button class="table-action danger" type="button" ${api.status === "啟用" ? "disabled" : ""}>刪除</button>
-      <button class="table-action" type="button">更多</button>
+
     </div></td>
   </tr>`);
   const typeRows = apiTypes.map((type) => `<tr>
@@ -567,7 +580,7 @@ function questionnaireTabs(active) {
 }
 
 function renderQuestionnaireFields() {
-  const rows = questionFields.map((f) => `<tr>
+  const rows = questionFields.filter(f=>listMatches("fields",[f.name,f.key,f.type,listFormats[f.type]],[listFormats[f.type],f.status])).map((f) => `<tr>
     <td><div class="cell-main"><button class="link-button" type="button" data-question-field="${f.key}">${f.name}</button><span class="muted-text">${f.purpose}</span></div></td>
     <td><code>${f.key}</code></td>
     <td>${f.type}</td>
@@ -579,12 +592,11 @@ function renderQuestionnaireFields() {
     <td><div class="row-actions">
       <button class="table-action" type="button" data-question-field="${f.key}">檢視／編輯</button>
       <button class="table-action danger" type="button" ${f.status !== "啟用" ? "" : "disabled"}>刪除</button>
-      <button class="table-action" type="button">更多</button>
     </div></td>
   </tr>`);
   return [
     `<section class="notice"><strong>規格重點</strong><p>後台人員可自訂欄位、API Key、回答格式與選項，再組成問卷。這裡的 API Key 是欄位代碼（例如 species），不是串接驗證金鑰；已串接欄位變更代碼或格式時，需同步確認官網與推薦規則。</p></section>`,
-    listHeader({ search: "搜尋欄位名稱、API Key、回答格式", filters: [{ label: "回答格式", options: ["全部格式", "輸入框", "數字", "下拉選單", "單選", "多選", "滑桿"] }, { label: "狀態", options: ["全部狀態", "啟用", "草稿", "停用"] }], button: "+ 新增欄位", actionAttr: 'data-question-field="new"' }),
+    listHeader({ queryKey:"fields", search: "搜尋欄位名稱、API Key、回答格式", filters: [{ label: "回答格式", options: ["全部格式", "輸入框", "數字", "下拉選單", "單選", "多選", "滑桿"] }, { label: "狀態", options: ["全部狀態", "啟用", "草稿", "停用"] }], button: "+ 新增欄位", actionAttr: 'data-question-field="new"' }),
     section("欄位庫", "先定義可重用欄位、回答格式與 payload key，再供問卷版本挑選組合。", table(["欄位名稱", "API Key", "回答格式", "必填", "排序", "選項數", "Payload path", "狀態", "操作"], rows, 1080), "schema source"),
   ].join("");
 }
@@ -637,7 +649,7 @@ function renderQuestionFieldDetail() {
 }
 
 function renderQuestionnaireVersions() {
-  const rows = questionnaires.map((item) => `<tr>
+  const rows = questionnaires.filter(q=>listMatches("versions",[q.name,q.version],[q.status])).map((item) => `<tr>
     <td><button class="link-button" type="button" data-questionnaire-version="${item.version}">${item.name}</button><br><span class="muted-text">${item.version}</span></td>
     <td>${item.composition?.length||0}</td>
     <td>${item.composition?.filter(f=>f.required).length||0}</td>
@@ -650,7 +662,7 @@ function renderQuestionnaireVersions() {
     </div></td>
   </tr>`);
   return [
-    listHeader({ search: "搜尋問卷名稱、版本", filters: [{ label: "狀態", options: ["全部狀態", "已發布", "草稿", "停用"] }], button: "+ 建立問卷", actionAttr: 'data-questionnaire-version="new"' }),
+    listHeader({ queryKey:"versions", search: "搜尋問卷名稱、版本", filters: [{ label: "狀態", options: ["全部狀態", "已發布", "草稿", "停用"] }], button: "+ 建立問卷", actionAttr: 'data-questionnaire-version="new"' }),
     section("問卷版本", "已發布版本唯讀；複製為草稿後修改。確認發布時，新版生效、舊版自動停用，同時間只有一份已發布問卷。", table(["問卷名稱", "欄位數", "必填數", "狀態", "最後更新", "操作"], rows, 980), "questionnaire versions"),
   ].join("");
 }
@@ -776,7 +788,6 @@ function renderNutritionTemplates() {
     <td><div class="row-actions">
       <button class="table-action" type="button" data-template-detail="${t.name}">檢視</button>
       <button class="table-action" type="button" data-template-detail="${t.name}">確認</button>
-      <button class="table-action" type="button">更多</button>
     </div></td>
   </tr>`);
   return [
@@ -962,7 +973,6 @@ function renderApiMonitoring() {
     <td>${l.error}</td>
     <td><div class="row-actions">
       <button class="table-action" type="button" data-api-log="${index}">檢視</button>
-      <button class="table-action" type="button">更多</button>
     </div></td>
   </tr>`);
   const tokenRows = tokenUsage.map((t) => `<tr><td>${t.time}</td><td>${t.model}</td><td>${t.purpose}</td><td>${t.input}</td><td>${t.output}</td><td>${t.total}</td><td>待串接帳務</td><td><code>${t.caseId}</code></td></tr>`);
